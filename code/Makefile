@@ -1,6 +1,6 @@
-APP_NAME=wireroute
+APP_NAME=main
 
-OBJS=wireroute.o
+OBJS=main.o
 
 default: $(APP_NAME)
 
