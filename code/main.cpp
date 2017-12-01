@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <string.h>
 
-
 #include "main.h"
 
 const int N = 3; //dimensions of board
@@ -181,17 +180,27 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   return result;
 }
 
+node_t readInput() {
+  printf("hello\n");
+  int r, c;
+  std::cout << "Row #: ";
+  std::cin >> r;
+  std::cout << "Col #: ";
+  std::cin >> c;
+  node_t in = node_t();
+  in.value = 0;
+  in.row = r;
+  in.col = c;
+  return in;
+}
+
 int main() {
   char* board = (char *) calloc(N*N, sizeof(char));
 
   //let user go first. wait for input.
   //TODO: fill this in with user's input
-  int row = 1;
-  int col = 1; 
-  node_t root = node_t();
-  root.value = calculateValue(board, row, col, 'X');
-  root.row = row;
-  root.col = col;
+  node_t root = readInput();
+  root.value = calculateValue(board, root.row, root.col, 'X');
   //depth = # of turns taken (depth/2 = # game cycles)
   node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
   board[root.row*N+root.col] = 'O';
