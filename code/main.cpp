@@ -2,6 +2,8 @@
 #include <climits>
 #include <stdio.h>
 #include <cstdlib>
+#include <string.h>
+
 
 #include "main.h"
 
@@ -14,9 +16,23 @@ int max(int a, int b) {
   return (a > b) ? a : b;
 }
 void updateCLI(char *board) {
+  for(int c = 0; c < N; c++) {
+    printf(" -");
+  }
+  printf("\n");
   for(int r = 0; r < N; r++) {
+    printf("|");
     for(int c = 0; c < N; c++) {
-      printf("%c |", board[r*N+c]);
+      char temp = board[r*N+c];
+      if(temp == 0) {
+        printf(" |");
+      } else {
+        printf("%c|", temp);
+      }
+    }
+    printf("\n");
+    for(int c = 0; c < N; c++) {
+      printf(" -");
     }
     printf("\n");
   }
@@ -88,20 +104,32 @@ bool isWinner(int row, int col, char* board, char player) {
  * botMaximizing - true if its the bot's turn
  * keep track of how many X's and O's have already been placed on the board
  */
-int alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, char* board, int numTurns) {
+node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, char* abBoard, int numTurns) {
+  char* board = (char *) malloc(N*N*sizeof(char));
+  memcpy(board, abBoard, N*N);
   if(botMaximizing) {
     board[node.row*N+node.col] = 'O';
-    if(isWinner(node.row, node.col, board, 'O')) return INT_MAX;
+    if(isWinner(node.row, node.col, board, 'O')) {
+      node_t res = node_t();
+      res.value = INT_MAX;
+      res.row = node.row;
+      res.col = node.col;
+      return res;
+    } 
   }
   else {
     board[node.row*N+node.col] = 'X';
-    if(isWinner(node.row, node.col, board, 'X')) return INT_MIN;
+    if(isWinner(node.row, node.col, board, 'X')) {
+      node_t res = node_t();
+      res.value = INT_MIN;
+      res.row = node.row;
+      res.col = node.col;
+      return res;
+    } 
   }
-  printf("num turns = %d:\n", numTurns);
-  updateCLI(board);
   int numChildren = (N*N) - numTurns;
   if(depth == 0 || numChildren == 0) {
-    return node.value;
+    return node;
   }
   //generate tree
   node_t *children = (node_t *) malloc(numChildren * sizeof(node_t));
@@ -123,23 +151,34 @@ int alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, c
   if(childIndex != numChildren) { 
     // printf("child = %d, n*n = %d, num turns = %d\n", childIndex, numChildren, numTurns);
   }
-  int value;
+  node_t result = node_t();
   if(botMaximizing) {
-    value = INT_MIN;
+    result.value = INT_MIN;
     for(int i = 0; i < numChildren; i++) {
-      value = max(value, alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1));
-      alpha = max(alpha, value); 
+      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
+      if(ab.value > result.value) {
+        result.value = ab.value;
+        result.row = ab.row;
+        result.col = ab.col;
+      }
+      alpha = max(alpha, result.value);
     }
   }
   else {
-    value = INT_MAX;
+    result = node_t();
+    result.value = INT_MAX;
     for(int i = 0; i < numChildren; i++) {
-      value = min(value, alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1));
-      beta = min(beta, value);
+      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
+      if(ab.value < result.value) {
+        result.value = ab.value;
+        result.row = ab.row;
+        result.col = ab.col;
+      }
+      beta = min(beta, result.value);
     }
   }
   free(children);
-  return value;
+  return result;
 }
 
 int main() {
@@ -153,10 +192,11 @@ int main() {
   root.value = calculateValue(board, row, col, 'X');
   root.row = row;
   root.col = col;
-  char* abBoard = (char *) calloc(N*N, sizeof(char));
   //depth = # of turns taken (depth/2 = # game cycles)
-  alphabeta(root, 2, INT_MIN, INT_MAX, true, abBoard, 1);
-  // updateCLI(board);
+  node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
+  board[root.row*N+root.col] = 'O';
+  board[res.row*N+res.col] = 'X';
+  updateCLI(board);
   free(board);
   return 0;
 }
