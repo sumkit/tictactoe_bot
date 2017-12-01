@@ -42,7 +42,70 @@ void updateCLI(char *board) {
 /**
  * Calculate the heuristic of playing a letter on a square for this player
  * player either equals 'X' (user) or 'O' (bot)
+ * make sure AI blocks when player is about to win 
+ * https://en.wikipedia.org/wiki/Tic-tac-toe 
  */
+
+
+int calculateSmallBoardScore(char *board, char bot, char player) { 
+  int center = 1 * N + 1; 
+  int score = 0; 
+  if (board[center] == bot) 
+    score += 3;
+  else if (board[center] == player)  
+    score -= 3; 
+  
+
+  int diagScoreOne = 0;
+  int diagScoreTwo = 0; 
+
+  for (int i = 0; i < N; i++) { 
+    int colScore = 0; 
+    for (int col = 0; col < N; col++) { 
+      if (board[i*N+col] == bot) 
+        colScore += 1;
+      else if (board[i*N+col] == player) 
+        colScore -= 1; 
+    }
+
+    if (colScore >= 2 || colScore <= -2) 
+      score += colScore; 
+
+    int rowScore = 0; 
+    for (int row = 0; row < N; row++) { 
+      if (board[row*N + i] == bot) 
+        rowScore += 1; 
+      else if (board[row * N + i] == player) 
+        rowScore -= 1; 
+    }
+
+    if (rowScore >= 2 || rowScore <= -2) 
+      score += rowScore; 
+
+    if (board[i*N+i] == bot) 
+      diagScoreOne += 1; 
+    else if (board[i*N+i] == player)
+      diagScoreOne -= 1; 
+
+    if (board[i*N+(N-(i+1))] == bot) 
+      diagScoreTwo += 1;
+    else if (board[i*N + (N-(i+1))] == player)
+      diagScoreTwo -= 1; 
+
+  }
+
+  if (diagScoreOne >= 2 || diagScoreOne <= -2) 
+      score += diagScoreOne; 
+
+
+  if (diagScoreTwo >= 2 || diagScoreTwo <= -2) 
+      score += diagScoreTwo; 
+
+  return score; 
+
+}
+
+
 int calculateValue(char *board, int row, int col, char player) {
   int rowSquare = 1;
   int colSquare = 1;
