@@ -1,5 +1,7 @@
 #include <iostream>
 #include <climits>
+#include <stdio.h>
+#include <cstdlib>
 
 #include "main.h"
 
@@ -11,6 +13,15 @@ int min(int a, int b) {
 int max(int a, int b) {
   return (a > b) ? a : b;
 }
+void updateCLI(char *board) {
+  for(int r = 0; r < N; r++) {
+    for(int c = 0; c < N; c++) {
+      printf("%c |", board[r*N+c]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+}
 
 /**
  * Calculate the heuristic of playing a letter on a square for this player
@@ -19,6 +30,7 @@ int max(int a, int b) {
 int calculateValue(char *board, int row, int col, char player) {
   int rowSquare = 1;
   int colSquare = 1;
+  int diagSquare = 1;
   int value = 0;
   
   for(int i = 0; i < N; i++) {
@@ -36,6 +48,14 @@ int calculateValue(char *board, int row, int col, char player) {
       rowSquare++;
     }
     if(board[i*N+col] == 0) {
+      value++;
+    }
+    //check diagonal
+    if(board[i*N+i] == player) {
+      value += (diagSquare*diagSquare);
+      diagSquare++;
+    }
+    if(board[i*N+i] == 0) {
       value++;
     }
   }
@@ -69,67 +89,57 @@ bool isWinner(int row, int col, char* board, char player) {
  * keep track of how many X's and O's have already been placed on the board
  */
 int alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, char* board, int numTurns) {
+  if(botMaximizing) {
+    board[node.row*N+node.col] = 'O';
+    if(isWinner(node.row, node.col, board, 'O')) return INT_MAX;
+  }
+  else {
+    board[node.row*N+node.col] = 'X';
+    if(isWinner(node.row, node.col, board, 'X')) return INT_MIN;
+  }
+  printf("num turns = %d:\n", numTurns);
+  updateCLI(board);
+  int numChildren = (N*N) - numTurns;
+  if(depth == 0 || numChildren == 0) {
+    return node.value;
+  }
   //generate tree
-  node_t *children = (node_t *) malloc(((N*N) - numTurns) * sizeof(node_t));
+  node_t *children = (node_t *) malloc(numChildren * sizeof(node_t));
   int childIndex = 0;
   for(int i = 0; i < N; i++) {
     for(int j = 0; j < N; j++) {
       int index = i*N + j;
       if(board[index] == 0) {
         int val = calculateValue(board, i, j, botMaximizing ? 'O' : 'X');
-        children[childIndex].value = val;
-        children[childIndex].row = i;
-        children[childIndex].col = j; 
+        node_t temp = node_t();
+        temp.value = val;
+        temp.row = i;
+        temp.col = j;
+        children[childIndex] = temp;
         childIndex++;
       }
     }
   }
-
-  if(depth == 0 || (N*N) - numTurns == 0) {
-    printf("depth: %d, %d, %p\n", depth, (N*N) - numTurns, (void *)&children);
-    free(children);
-    printf("after depth 0\n");
-    return node.value;
+  if(childIndex != numChildren) { 
+    // printf("child = %d, n*n = %d, num turns = %d\n", childIndex, numChildren, numTurns);
   }
-
   int value;
   if(botMaximizing) {
     value = INT_MIN;
-    for(int i = 0; i < (N*N)-numTurns; i++) {
-      board[node.row*N+node.col] = 'O';
-      value = max(value, alphabeta(children[i], depth-1, alpha, beta, false, board, numTurns+1));
-      printf("bot max depth: %d, %d, %p\n", depth, (N*N) - numTurns, (void *)&children);
-      free(children);
-      printf("after bot max\n");
+    for(int i = 0; i < numChildren; i++) {
+      value = max(value, alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1));
       alpha = max(alpha, value); 
     }
   }
   else {
     value = INT_MAX;
-    for(int i = 0; i < (N*N)-numTurns; i++) {
-      board[node.row*N+node.col] = 'X';
-      value = min(value, alphabeta(children[i], depth-1, alpha, beta, true, board, numTurns+1));
-      printf("bot min depth: %d, %d, %p\n", depth, (N*N) - numTurns, (void *)&children);
-      free(children);
-      printf("after bot min\n");
+    for(int i = 0; i < numChildren; i++) {
+      value = min(value, alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1));
       beta = min(beta, value);
     }
   }
-  printf("%d\n", depth);
+  free(children);
   return value;
-}
-
-void updateCLI(char *board) {
-  for(int outer = 0; outer < N; outer++) {
-    for(int i =0 ; i< N; i++) {
-      printf("%c |", board[outer*N+i]);
-    }
-    printf("\n");
-    for(int i = 0; i < N; i++) {
-      printf("- ");
-    }
-    printf("\n");
-  }
 }
 
 int main() {
@@ -139,14 +149,14 @@ int main() {
   //TODO: fill this in with user's input
   int row = 1;
   int col = 1; 
-  int depth = 5; //number of turns taken (depth/2 game cycles)
-  node_t root;
+  node_t root = node_t();
   root.value = calculateValue(board, row, col, 'X');
   root.row = row;
   root.col = col;
-  printf("here\n");
-  alphabeta(root, depth, INT_MIN, INT_MAX, true, board, 0);
-  printf("here2\n");
-  updateCLI(board);
+  char* abBoard = (char *) calloc(N*N, sizeof(char));
+  //depth = # of turns taken (depth/2 = # game cycles)
+  alphabeta(root, 2, INT_MIN, INT_MAX, true, abBoard, 1);
+  // updateCLI(board);
+  free(board);
   return 0;
 }
