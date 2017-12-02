@@ -9,6 +9,9 @@
 
 #define BUFSIZE 1024
 
+static int _argc;
+static const char **_argv;
+
 const int N = 3; //dimensions of board
 
 int min(int a, int b) {
@@ -209,7 +212,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     for(int j = 0; j < N; j++) {
       int index = i*N + j;
       if(board[index] == 0) {
-        int val = calculateValue(board, i, j, botMaximizing ? 'O' : 'X');
+        int val = calculateSmallBoardScore(board, botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O');
+        // int val = calculateValue(board, i, j, botMaximizing ? 'O' : 'X');
         node_t temp = node_t();
         temp.value = val;
         temp.row = i;
@@ -266,8 +270,21 @@ node_t readInput() {
   return in;
 }
 
-int main() {
+/* Starter code function, do not touch */
+int get_option_int(const char *option_name, int default_value)
+{
+  for (int i = _argc - 2; i >= 0; i -= 2)
+    if (strcmp(_argv[i], option_name) == 0)
+      return atoi(_argv[i + 1]);
+  return default_value;
+}
+
+int main(int argc, const char *argv[]) {
+  _argc = argc - 1;
+  _argv = argv + 1;
+
   char* board = (char *) calloc(N*N, sizeof(char));
+  int num_of_threads = get_option_int("-n", 1);
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
 
@@ -281,9 +298,17 @@ int main() {
     //depth = # of turns taken (depth/2 = # game cycles)
     char winner;
     int numTurns = 0;
+
+    //TODO start with random row and column 
+    node_t root = node_t();
+    root.row = 1;
+    root.col = 1;
+    // root.value = calculateValue(board, 1,1, false);
+    root.value = calculateSmallBoardScore(board, 'O', 'X');
+    board[4] = 'O';
     while(1) {
       //let user go first. wait for input.
-      node_t root = readInput();
+      /*node_t root = readInput();
       root.value = calculateValue(board, root.row, root.col, 'X');
       board[root.row*N+root.col] = 'O';
       if(isWinner(root.row, root.col, board, 'O')) {
@@ -295,6 +320,24 @@ int main() {
       if(numTurns = N*N) {
         printf("Tie!\n");
         break;
+      }*/
+      if(root.row != 1 && root.col != 1) {
+        node_t res0 = alphabeta(root, 2, INT_MIN, INT_MAX, false, board, 1);
+        board[res0.row*N+res0.col] = 'O';
+        updateCLI(board);
+        if(isWinner(res0.row, res0.col, board, 'O')) {
+          winner = 'O';
+          printf("O Won!\n");
+          break;
+        }
+        numTurns++;
+        if(numTurns == N*N) {
+          printf("Tie!\n");
+          break;
+        }
+        root.row = res0.row;
+        root.col = res0.col;
+        root.value = res0.value;
       }
       
       node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
@@ -310,6 +353,9 @@ int main() {
         printf("Tie!\n");
         break;
       }
+      root.row = res.row;
+      root.col = res.col;
+      root.value = res.value;
     }
   }
 
