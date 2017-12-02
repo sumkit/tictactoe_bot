@@ -9,7 +9,6 @@ else
   curdir=`pwd`
   curdir=${curdir%/templates}
   sed "s:PROGDIR:${curdir}:g" ../scripts/example.job.template > tmp1.job
-  # sed "s:INPUT:${input}:g" tmp1.job > tmp2.job
-  sed "s:THREADS:${threads}:g" tmp2.job > ${USER}_${threads}.job
-  rm -f tmp1.job tmp2.job
+  sed "s:THREADS:${threads}:g" tmp1.job > ${USER}_${threads}.job
+  rm -f tmp1.job
 fi

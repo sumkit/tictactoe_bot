@@ -2,9 +2,12 @@
 #include <climits>
 #include <stdio.h>
 #include <cstdlib>
+#include <omp.h>
 #include <string.h>
 
 #include "main.h"
+
+#define BUFSIZE 1024
 
 const int N = 3; //dimensions of board
 
@@ -141,23 +144,29 @@ int calculateValue(char *board, int row, int col, char player) {
 }
 
 bool isWinner(int row, int col, char* board, char player) {
+  bool rowWin = true;
+  bool colWin = true;
+  bool fwdDiagWin = row == col;
+  bool backDiagWin = row == N-(col+1);
   for(int i = 0; i < N; i++) {
-    if(board[i*N+col] != player) {
+    if(colWin && board[i*N+col] != player) {
       //check col
-      return false;
+      colWin = false;
     }
-    if(board[row*N+i] != player) {
+    if(rowWin && board[row*N+i] != player) {
       //check row
-      return false;
+      rowWin = false;
     }
-    if(row == col) {
+    if(fwdDiagWin && board[i*N+i] != player) {
       //check diagonal
-      if(board[i*N+i] != player) {
-        return false;
-      }
+      fwdDiagWin = false;
+    }
+    if(backDiagWin && board[i*N+(N-(i+1))] != player) {
+      //other diagonal (0, 2) (1, 1)
+      backDiagWin = false;
     }
   }
-  return true;
+  return rowWin || colWin || fwdDiagWin || backDiagWin;
 }
 
 /**
@@ -210,13 +219,12 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
       }
     }
   }
-  if(childIndex != numChildren) { 
-    // printf("child = %d, n*n = %d, num turns = %d\n", childIndex, numChildren, numTurns);
-  }
   node_t result = node_t();
   if(botMaximizing) {
     result.value = INT_MIN;
-    for(int i = 0; i < numChildren; i++) {
+    int i;
+    #pragma omp parallel for default(shared) private(i) num_threads(256)
+    for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
       if(ab.value > result.value) {
         result.value = ab.value;
@@ -229,7 +237,9 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   else {
     result = node_t();
     result.value = INT_MAX;
-    for(int i = 0; i < numChildren; i++) {
+    int i;
+    #pragma omp parallel for default(shared) private(i) num_threads(256)
+    for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
       if(ab.value < result.value) {
         result.value = ab.value;
@@ -244,7 +254,6 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
 }
 
 node_t readInput() {
-  printf("hello\n");
   int r, c;
   std::cout << "Row #: ";
   std::cin >> r;
@@ -260,15 +269,80 @@ node_t readInput() {
 int main() {
   char* board = (char *) calloc(N*N, sizeof(char));
 
-  //let user go first. wait for input.
-  //TODO: fill this in with user's input
-  node_t root = readInput();
-  root.value = calculateValue(board, root.row, root.col, 'X');
-  //depth = # of turns taken (depth/2 = # game cycles)
-  node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
-  board[root.row*N+root.col] = 'O';
-  board[res.row*N+res.col] = 'X';
-  updateCLI(board);
+#ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
+
+  /* This pragma means we want the code in the following block be executed in 
+   * Xeon Phi.
+   */
+#pragma offload target(mic) \
+  // inout(board: length(N*N) INOUT) 
+#endif
+  {
+    //depth = # of turns taken (depth/2 = # game cycles)
+    char winner;
+    int numTurns = 0;
+    while(1) {
+      //let user go first. wait for input.
+      node_t root = readInput();
+      root.value = calculateValue(board, root.row, root.col, 'X');
+      board[root.row*N+root.col] = 'O';
+      if(isWinner(root.row, root.col, board, 'O')) {
+        winner = 'O';
+        printf("O Won!\n");
+        break;
+      }
+      numTurns++;
+      if(numTurns = N*N) {
+        printf("Tie!\n");
+        break;
+      }
+      
+      node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
+      board[res.row*N+res.col] = 'X';
+      updateCLI(board);
+      if(isWinner(res.row, res.col, board, 'X')) {
+        winner = 'X';
+        printf("X Won!\n");
+        break;
+      }
+      numTurns++;
+      if(numTurns == N*N) {
+        printf("Tie!\n");
+        break;
+      }
+    }
+  }
+
+  //write output to file
+  char output_filename[BUFSIZE];
+  sprintf(output_filename, "output_%d.txt", 256);
+  FILE *output_file = fopen(output_filename, "w");
+  if (!output_file) {
+    printf("Error: couldn't output costs file");
+    return -1;
+  }
+  for(int c = 0; c < N; c++) {
+    fprintf(output_file, " -");
+  }
+  fprintf(output_file, "\n");
+  for(int r = 0; r < N; r++) {
+    fprintf(output_file, "|");
+    for(int c = 0; c < N; c++) {
+      char temp = board[r*N+c];
+      if(temp == 0) {
+        fprintf(output_file, " |");
+      } else {
+        fprintf(output_file, "%c|", temp);
+      }
+    }
+    fprintf(output_file, "\n");
+    for(int c = 0; c < N; c++) {
+      fprintf(output_file, " -");
+    }
+    fprintf(output_file, "\n");
+  }
+  fclose(output_file);
+
   free(board);
   return 0;
 }
