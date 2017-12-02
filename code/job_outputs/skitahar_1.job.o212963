@@ -1,0 +1,81 @@
+ - - -
+| |X| |
+ - - -
+| |O| |
+ - - -
+| | | |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+| |O| |
+ - - -
+| | | |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| | | |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+ - - -
+|X|X| |
+ - - -
+|O|O| |
+ - - -
+| |X| |
+ - - -
+
+Tie!
+
+ Performance counter stats for './main -n 1':
+
+            106498      cache-misses                                                
+
+       1.471720204 seconds time elapsed
+
+mv: cannot stat `/home/skitahar/costs_*': No such file or directory

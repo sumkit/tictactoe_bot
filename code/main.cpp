@@ -178,7 +178,8 @@ bool isWinner(int row, int col, char* board, char player) {
  * botMaximizing - true if its the bot's turn
  * keep track of how many X's and O's have already been placed on the board
  */
-node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, char* abBoard, int numTurns) {
+node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, 
+  char* abBoard, int numTurns, int num_of_threads) {
   char* board = (char *) malloc(N*N*sizeof(char));
   memcpy(board, abBoard, N*N);
   if(botMaximizing) {
@@ -227,9 +228,10 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(256)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
-      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
+      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
+        board, numTurns+1, num_of_threads);
       if(ab.value > result.value) {
         result.value = ab.value;
         result.row = ab.row;
@@ -242,9 +244,10 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     result = node_t();
     result.value = INT_MAX;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(256)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
-      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, board, numTurns+1);
+      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
+        board, numTurns+1, num_of_threads);
       if(ab.value < result.value) {
         result.value = ab.value;
         result.row = ab.row;
@@ -322,7 +325,8 @@ int main(int argc, const char *argv[]) {
         break;
       }*/
       if(root.row != 1 && root.col != 1) {
-        node_t res0 = alphabeta(root, 2, INT_MIN, INT_MAX, false, board, 1);
+        node_t res0 = alphabeta(root, 2, INT_MIN, INT_MAX, false, board, 
+          1, num_of_threads);
         board[res0.row*N+res0.col] = 'O';
         updateCLI(board);
         if(isWinner(res0.row, res0.col, board, 'O')) {
@@ -340,7 +344,8 @@ int main(int argc, const char *argv[]) {
         root.value = res0.value;
       }
       
-      node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 1);
+      node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 
+        1, num_of_threads);
       board[res.row*N+res.col] = 'X';
       updateCLI(board);
       if(isWinner(res.row, res.col, board, 'X')) {
@@ -361,7 +366,7 @@ int main(int argc, const char *argv[]) {
 
   //write output to file
   char output_filename[BUFSIZE];
-  sprintf(output_filename, "output_%d.txt", 256);
+  sprintf(output_filename, "output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
   if (!output_file) {
     printf("Error: couldn't output costs file");
