@@ -4,3 +4,8 @@ struct node_t {
   int row;
   int col;
 };
+
+struct board_t { 
+  char* board; 
+  char status; 
+};

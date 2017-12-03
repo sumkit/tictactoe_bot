@@ -282,11 +282,95 @@ int get_option_int(const char *option_name, int default_value)
   return default_value;
 }
 
+
+bool boardComplete(char* local_board) { 
+  for (int i = 0; i < N*N; i++) { 
+    if (local_board[i] == 0)
+      return false;
+  }
+
+  return true; 
+}
+
+//returns which board the opponent needs to make a move in next 
+//if that board is complete, returns -1 
+int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
+  char* local_board = meta_board[local_board_idx].board; 
+  local_board[row*N+col] = player; 
+  if (isWinner(row, col, local_board, player))
+    meta_board[local_board_idx].status = player; 
+
+  if (boardComplete(local_board))
+    meta_board[local_board_idx].status = 1; 
+
+  int next_board_idx = row*N+col; 
+
+  if (meta_board[next_board_idx].status == 0) 
+    return next_board_idx; 
+
+  return -1; 
+}
+
+bool isMetaWinner(board_t* meta, char player) { 
+  bool rowWin = false;
+  bool colWin = false; 
+  bool diagWin = true; 
+
+  for (int i = 0; i < N; i++) { 
+    rowWin = true; 
+    for (int j = 0; j < N; j++) { 
+      if (meta[i*N + j].status != player)
+        rowWin = false; 
+    }
+    if (rowWin) return true; 
+
+  }
+
+  for (int i = 0; i < N; i++) { 
+    colWin = true; 
+    for (int j = 0; j<N; j++) { 
+      if(meta[i + j*N].status != player)
+        colWin = false;
+    }
+    if (colWin) return true; 
+  }
+
+  for (int i = 0; i < N; i++) { 
+    if (meta[i * N + i].status != player)
+      diagWin = false; 
+  }
+  if (diagWin) return true; 
+
+  diagWin = true; 
+  for (int i =0; i < N; i++) { 
+    if (meta[i * N + (N-(i+1))].status != player)
+        diagWin = false;
+  }
+  if (diagWin) return true;
+
+  return false;
+
+}
+
+
+
 int main(int argc, const char *argv[]) {
   _argc = argc - 1;
   _argv = argv + 1;
 
-  char* board = (char *) calloc(N*N, sizeof(char));
+
+  // 3x3 meta board with pointers to 9 constituent local boards 
+  // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
+  board_t* meta_board = (board_t*) calloc(N*N, sizeof(board_t)); 
+  for (int i = 0; i < N*N; i++) { 
+    char* local_board = (char *) calloc(N*N, sizeof(char)); 
+    meta_board[i].board = local_board; 
+    meta_board[i].status = 0; 
+  }
+
+  //TODO: take this out 
+  char* board = meta_board[0].board; 
+
   int num_of_threads = get_option_int("-n", 1);
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
