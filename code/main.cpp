@@ -20,7 +20,7 @@ int min(int a, int b) {
 int max(int a, int b) {
   return (a > b) ? a : b;
 }
-void updateCLI(char *board) {
+void updateCLI(char *board, int numTurns) {
   for(int c = 0; c < N; c++) {
     printf(" -");
   }
@@ -41,7 +41,7 @@ void updateCLI(char *board) {
     }
     printf("\n");
   }
-  printf("\n");
+  printf("numTurn = %d\n", numTurns);
 }
 
 /**
@@ -182,6 +182,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   char* abBoard, int numTurns, int num_of_threads) {
   char* board = (char *) malloc(N*N*sizeof(char));
   memcpy(board, abBoard, N*N);
+  if(numTurns == 6) printf("%d\n", (int)botMaximizing);
   if(botMaximizing) {
     board[node.row*N+node.col] = 'O';
     if(isWinner(node.row, node.col, board, 'O')) {
@@ -228,7 +229,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
         board, numTurns+1, num_of_threads);
@@ -244,7 +245,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     result = node_t();
     result.value = INT_MAX;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
         board, numTurns+1, num_of_threads);
@@ -384,7 +385,7 @@ int main(int argc, const char *argv[]) {
   {
     //depth = # of turns taken (depth/2 = # game cycles)
     char winner;
-    int numTurns = 0;
+    int numTurns = 1;
 
     //TODO start with random row and column 
     node_t root = node_t();
@@ -408,11 +409,11 @@ int main(int argc, const char *argv[]) {
         printf("Tie!\n");
         break;
       }*/
-      if(root.row != 1 && root.col != 1) {
+      if(!(root.row != 1 && root.col != 1)) {
         node_t res0 = alphabeta(root, 2, INT_MIN, INT_MAX, false, board, 
           1, num_of_threads);
         board[res0.row*N+res0.col] = 'O';
-        updateCLI(board);
+        updateCLI(board, numTurns+1);
         if(isWinner(res0.row, res0.col, board, 'O')) {
           winner = 'O';
           printf("O Won!\n");
@@ -431,7 +432,7 @@ int main(int argc, const char *argv[]) {
       node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 
         1, num_of_threads);
       board[res.row*N+res.col] = 'X';
-      updateCLI(board);
+      updateCLI(board, numTurns+1);
       if(isWinner(res.row, res.col, board, 'X')) {
         winner = 'X';
         printf("X Won!\n");

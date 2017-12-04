@@ -1,7 +1,7 @@
 #/usr/bin/env bash
 # generate jobs in batch
 
-threads=(1 236) # The number of threads 
+threads=(1 64) # The number of threads 
 rm -f *.job
 
 for t in ${threads[@]}
