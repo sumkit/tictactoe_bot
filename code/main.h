@@ -8,4 +8,5 @@ struct node_t {
 struct board_t { 
   char* board; 
   char status; 
+  int numFilled;
 };

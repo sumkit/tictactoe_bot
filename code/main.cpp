@@ -84,7 +84,6 @@ int calculateSmallBoardScore(char *board, char bot, char player) {
   else if (board[center] == player)  
     score -= 3; 
   
-
   int diagScoreOne = 0;
   int diagScoreTwo = 0; 
 
@@ -205,11 +204,10 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
   char* abBoard, int numTurns, int num_of_threads) {
   char* board = (char *) malloc(N*N*sizeof(char));
   memcpy(board, abBoard, N*N);
-
   if(nodePtr != NULL) {
     node_t node = *nodePtr;
     if(botMaximizing) {
-      board[node.row*N+node.col] = 'O';
+      // board[node.row*N+node.col] = 'O';
       if(isWinner(node.row, node.col, board, 'O')) {
         node_t res = node_t();
         res.value = INT_MAX;
@@ -219,7 +217,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
       } 
     }
     else {
-      board[node.row*N+node.col] = 'X';
+      // board[node.row*N+node.col] = 'X';
       if(isWinner(node.row, node.col, board, 'X')) {
         node_t res = node_t();
         res.value = INT_MIN;
@@ -252,6 +250,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
       }
     }
   }
+  if(childIndex >= numChildren) printf("C.I. = %d, # children = %d\n", childIndex, numChildren);
   node_t result = node_t();
   if(botMaximizing) {
     result.value = INT_MIN;
@@ -324,7 +323,7 @@ bool boardComplete(char* local_board) {
 //if that board is complete, returns -1 
 int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
   int next_board_idx = row*N+col; 
-  meta_board[row*N+col].board[next_board_idx] = player; 
+  meta_board[local_board_idx].board[next_board_idx] = player; 
   if (isWinner(row, col, meta_board[row*N+col].board, player))
     meta_board[local_board_idx].status = player; 
 
@@ -575,6 +574,7 @@ int main(int argc, const char *argv[]) {
     char* local_board = (char *) calloc(N*N, sizeof(char)); 
     meta_board[i].board = local_board; 
     meta_board[i].status = 0; 
+    meta_board[i].numFilled = 0; 
   }
 
   //TODO: take this out 
@@ -594,8 +594,9 @@ int main(int argc, const char *argv[]) {
     //depth = # of turns taken (depth/2 = # game cycles)
     char winner;
     int numTurns = 1;
+    int numCompleteBoards = 0;
 
-    int nextIsTBD; //if next mini board is not yet decided because the calculated one is already completed
+    int nextIsTBD = false; //if next mini board is not yet decided because the calculated one is already completed
 
     //TODO start with random row and column 
     node_t root = node_t();
@@ -603,7 +604,7 @@ int main(int argc, const char *argv[]) {
     root.col = 1;
     // root.value = calculateValue(board, 1,1, false);
     root.value = calculateSmallBoardScore(meta_board[0].board, 'O', 'X');
-    makeMove(meta_board, root.row*N+root.col, root.row, root.col, 'O');
+    makeMove(meta_board, 0, root.row, root.col, 'O');
     while(1) {
       //let user go first. wait for input.
       /*node_t root = readInput();
@@ -619,10 +620,13 @@ int main(int argc, const char *argv[]) {
         printf("Tie!\n");
         break;
       }*/
-      if(numTurns % 10000 == 0) updateMetaCLI(meta_board);
-      if(!(root.row != 1 && root.col != 1)) {
+      printf("num turns = %d\n", numTurns);
+      updateMetaCLI(meta_board);
+      //TODO change this to check if it is the first turn or not
+      if(!(root.row == 1 && root.col == 1)) {
         int nextIndex0;
         if(nextIsTBD) {
+
           //TODO meta_board -> char* board
           char *tempBoard = (char *) calloc(N*N, sizeof(char));
           for(int i = 0; i < N; i++) {
@@ -630,17 +634,18 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t metaRes = alphabeta(NULL, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+          node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, numCompleteBoards, num_of_threads);
           free(tempBoard);
           nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
         int mm0 = makeMove(meta_board, nextIndex0, root.row, root.col, 'X');
-        node_t res0 = alphabeta(&root, 2, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
-            1, num_of_threads);
+        node_t res0 = alphabeta(&root, 1, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
+            meta_board[nextIndex0].numFilled, num_of_threads);
         if(mm0 != nextIndex0 ) {
           nextIsTBD = true;
+          numCompleteBoards++;
         } else {
           nextIsTBD = false;
         }
@@ -656,9 +661,9 @@ int main(int argc, const char *argv[]) {
           // break;
         }
         numTurns++;
-        if(numTurns == N*N) {
-          // printf("Tie!\n");
-          // break;
+        if(numTurns == N*N*N*N) {
+          printf("Tie!\n");
+          break;
         }
         root.row = res0.row;
         root.col = res0.col;
@@ -666,6 +671,7 @@ int main(int argc, const char *argv[]) {
       }
       
       int nextIndex;
+
       if(nextIsTBD) {
         char *tempBoard = (char *) calloc(N*N, sizeof(char));
         for(int i = 0; i < N; i++) {
@@ -673,19 +679,20 @@ int main(int argc, const char *argv[]) {
             tempBoard[i*N+j] = meta_board[i*N+j].status;
           }
         }
-        node_t metaRes = alphabeta(NULL, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+        node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, numCompleteBoards, num_of_threads);
         free(tempBoard);
         nextIndex = metaRes.row*N+metaRes.col;
       }
       else {
         nextIndex = root.row*N+root.col;
       }
-      node_t res = alphabeta(&root, 2, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
-          1, num_of_threads);
+      node_t res = alphabeta(&root, 1, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
+          meta_board[nextIndex].numFilled, num_of_threads);
       int mm = makeMove(meta_board, root.row*N+root.col, root.row, root.col, 'X');
 
       if(mm != nextIndex) {
         nextIsTBD = true;
+        numCompleteBoards++;
       } else {
         nextIsTBD = false;
       }
@@ -701,9 +708,9 @@ int main(int argc, const char *argv[]) {
         // break;
       }
       numTurns++;
-      if(numTurns == N*N) {
-        // printf("Tie on mini board\n");
-        // break;
+      if(numTurns == N*N*N*N) {
+        printf("Tie!\n");
+        break;
       }
       root.row = res.row;
       root.col = res.col;
