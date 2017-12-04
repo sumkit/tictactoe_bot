@@ -39,17 +39,35 @@ void updateCLI(char *board) {
     for(int c = 0; c < N; c++) {
       printf(" -");
     }
-    // printf("\n");
+    printf("\n");
   }
 }
 void updateMetaCLI(board_t *meta_board) {
-  for(int r = 0; r < N; r++) {
-    for(int c = 0; c < N; c++) {
-      updateCLI(meta_board[r*N+c].board);
+  for(int c = 0; c < N*N; c++) {
+    printf(" -");
+  }
+  printf("\n");
+  for(int n = 0; n < N; n++) {
+    //TODO show if the meta_board square is a win or tie 
+    for(int r = 0; r < N; r++) {
+      for(int n1 = 0; n1 < N; n1++) {
+        for(int c = 0; c < N; c++) {
+            char temp = meta_board[n*N+n1].board[r*N+c];
+          if(temp == 0) {
+            printf(" |");
+          } else {
+            printf("%c|", temp);
+          }
+        }
+      }
+      if(r < N-1) printf("\n");
     }
     printf("\n");
   }
-  printf("abc\n");
+  for(int c = 0; c < N*N; c++) {
+    printf(" -");
+  }
+  printf("\n");
 }
 
 /**
@@ -58,9 +76,6 @@ void updateMetaCLI(board_t *meta_board) {
  * make sure AI blocks when player is about to win 
  * https://en.wikipedia.org/wiki/Tic-tac-toe 
  */
-
-
-
 int calculateSmallBoardScore(char *board, char bot, char player) { 
   int center = 1 * N + 1; 
   int score = 0; 
@@ -308,15 +323,13 @@ bool boardComplete(char* local_board) {
 //returns which board the opponent needs to make a move in next 
 //if that board is complete, returns -1 
 int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
-  char* local_board = meta_board[local_board_idx].board; 
-  local_board[row*N+col] = player; 
-  if (isWinner(row, col, local_board, player))
+  int next_board_idx = row*N+col; 
+  meta_board[row*N+col].board[next_board_idx] = player; 
+  if (isWinner(row, col, meta_board[row*N+col].board, player))
     meta_board[local_board_idx].status = player; 
 
-  if (boardComplete(local_board)) //tie
+  if (boardComplete(meta_board[row*N+col].board)) //tie
     meta_board[local_board_idx].status = 1; 
-
-  int next_board_idx = row*N+col; 
 
   if (meta_board[next_board_idx].status == 0) 
     return next_board_idx; 
@@ -362,11 +375,10 @@ bool isMetaWinner(board_t* meta, char player) {
   if (diagWin) return true;
 
   return false;
-
 }
 
-
-int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, char player, char opp, int* oldScore) {
+int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, 
+  char player, char opp, int* oldScore) {
   int center = 1 * N + 1; 
   int* res = (int *) calloc(2, sizeof(int)); 
   
@@ -398,14 +410,12 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
     myScore += 3;
   }
 
-
   int opWon = 0;  
   int iWon = 1; 
   int fail = 0;
 
   //add 2 for getting a sequence of two tiles
   //subtract 2 from the opponent for blocking their sequence of two tiles
-
 
   char* board = meta_board[small_idx].board; 
   bool diagOne = ((row*N+col) % 4 == 0); 
@@ -420,7 +430,6 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
 
   if (iWon == 2 && opWon == 0) myScore += 2; 
   if (opWon == 2) hisScore -= 2; 
-
 
   opWon = 0;  
   iWon = 1; 
@@ -460,7 +469,6 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
     if (opWon == 2) hisScore -= 2; 
   }
 
-
   if (isWinner(row, col, board, player)) {
 
     if (isMetaWinner(meta_board, player)) {
@@ -496,7 +504,6 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
 
     if (iWon == 2 && fail == 0 && opWon == 0) myScore += 4; 
     if (opWon == 2) hisScore -= 4; 
-
 
     opWon = 0;  
     iWon = 1; 
@@ -557,12 +564,9 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
   return res;
 }
 
-
-
 int main(int argc, const char *argv[]) {
   _argc = argc - 1;
   _argv = argv + 1;
-
 
   // 3x3 meta board with pointers to 9 constituent local boards 
   // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
@@ -600,7 +604,6 @@ int main(int argc, const char *argv[]) {
     // root.value = calculateValue(board, 1,1, false);
     root.value = calculateSmallBoardScore(meta_board[0].board, 'O', 'X');
     makeMove(meta_board, root.row*N+root.col, root.row, root.col, 'O');
-    // board[4] = 'O';
     while(1) {
       //let user go first. wait for input.
       /*node_t root = readInput();
@@ -627,7 +630,7 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t metaRes = alphabeta(&root, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+          node_t metaRes = alphabeta(NULL, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
           free(tempBoard);
           nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
@@ -670,7 +673,7 @@ int main(int argc, const char *argv[]) {
             tempBoard[i*N+j] = meta_board[i*N+j].status;
           }
         }
-        node_t metaRes = alphabeta(&root, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+        node_t metaRes = alphabeta(NULL, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
         free(tempBoard);
         nextIndex = metaRes.row*N+metaRes.col;
       }
@@ -710,7 +713,7 @@ int main(int argc, const char *argv[]) {
 
   //TODO write output to file
   /*char output_filename[BUFSIZE];
-  sprintf(output_filename, "output_%d.txt", num_of_threads);
+  sprintf(output_filename, "file_outputs/output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
   if (!output_file) {
     printf("Error: couldn't output costs file");
