@@ -52,6 +52,7 @@ void updateCLI(char *board, int numTurns) {
  */
 
 
+
 int calculateSmallBoardScore(char *board, char bot, char player) { 
   int center = 1 * N + 1; 
   int score = 0; 
@@ -351,6 +352,198 @@ bool isMetaWinner(board_t* meta, char player) {
 
   return false;
 
+}
+
+
+int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, char player, char opp, int* oldScore) {
+  int center = 1 * N + 1; 
+  int* res = (int *) calloc(2, sizeof(int)); 
+  
+  int oldPlayerScore;
+  int oldOppScore; 
+  if (player == 'O') { 
+    oldPlayerScore = oldScore[0];
+    oldOppScore = oldScore[1];
+  } else {
+    oldPlayerScore = oldScore[1];
+    oldOppScore = oldScore[0]; 
+  }
+
+  int myScore = oldPlayerScore; 
+  int hisScore = oldOppScore; 
+
+  int metaRow = small_idx / N; 
+  int metaCol = small_idx % N; 
+  bool metaDiag1 = (small_idx % 4 == 0); 
+  bool metaDiag2 = (small_idx % 2 == 0 && small_idx < N*N-1 && small_idx > 0); 
+
+  //add 3 for any move in the center board
+  if (small_idx == center) {
+    myScore += 3; 
+  }
+
+  //add 3 for the center of any board
+  if (row * N + col == center) {
+    myScore += 3;
+  }
+
+
+  int opWon = 0;  
+  int iWon = 1; 
+  int fail = 0;
+
+  //add 2 for getting a sequence of two tiles
+  //subtract 2 from the opponent for blocking their sequence of two tiles
+
+
+  char* board = meta_board[small_idx].board; 
+  bool diagOne = ((row*N+col) % 4 == 0); 
+  bool diagTwo = (((row*N+col) % 2 == 0) && ((row*N+col) > 0) && ((row*N+col) < N*N-1)); 
+
+  for (int i = N*row; i < (N * (row + 1)); i++) { 
+    if (i == row*N + col) 
+      continue; 
+    if (board[i] == opp) opWon += 1; 
+    if (board[i] == player) iWon += 1; 
+  }
+
+  if (iWon == 2 && opWon == 0) myScore += 2; 
+  if (opWon == 2) hisScore -= 2; 
+
+
+  opWon = 0;  
+  iWon = 1; 
+  for (int i = col; i < N*N; i += N) {
+    if (i == row*N + col) 
+      continue; 
+    if (board[i] == opp) opWon += 1; 
+    if (board[i] == player) iWon += 1;
+  }
+
+  if (iWon == 2 && opWon == 0) myScore += 2; 
+  if (opWon == 2) hisScore -= 2; 
+
+  if (diagOne) { 
+    opWon = 0;  
+    iWon = 1; 
+    for (int i = 0; i < N*N; i += 4) {
+      if (i == row*N+col) 
+        continue; 
+      if (board[i] == opp) opWon += 1; 
+      if (board[i] == player) iWon += 1;
+    }
+    if (iWon == 2 && opWon == 0) myScore += 2; 
+    if (opWon == 2) hisScore -= 2; 
+  }
+
+  if (diagTwo) { 
+    opWon = 0;  
+    iWon = 1; 
+    for (int i = 2; i < N*N-1; i += 2) {
+      if (i == row*N+col) 
+        continue; 
+      if (board[i] == opp) opWon += 1; 
+      if (board[i] == player) iWon += 1;
+    }
+    if (iWon == 2 && opWon == 0) myScore += 2; 
+    if (opWon == 2) hisScore -= 2; 
+  }
+
+
+  if (isWinner(row, col, board, player)) {
+
+    if (isMetaWinner(meta_board, player)) {
+      res[0] = INT_MAX;
+      res[1] = hisScore; 
+      return res; 
+    }
+
+    //add 5 for any small board win
+    myScore += 5;
+    if (small_idx == center)
+      //add 10 for winning center board
+      myScore += 10; 
+    if (small_idx != center && small_idx % 2 == 0) 
+      //add 3 for winning corner board
+      myScore += 3; 
+
+    //add 4 for getting a sequence of 2 unblocked winning boards 
+    //subtract 4 from the opponent for blocking their sequence of winning boards 
+
+    opWon = 0;  
+    iWon = 1; 
+    fail = 0; 
+
+    for (int i = N*metaRow; i < (N * (metaRow + 1)); i++) { 
+      if (i == small_idx) 
+        continue; 
+      char status = meta_board[i].status; 
+      if (status == player) iWon += 1; 
+      if (status == opp) opWon += 1; 
+      if (status == 1) fail += 1; 
+    }
+
+    if (iWon == 2 && fail == 0 && opWon == 0) myScore += 4; 
+    if (opWon == 2) hisScore -= 4; 
+
+
+    opWon = 0;  
+    iWon = 1; 
+    fail = 0; 
+    for (int i = metaCol; i < N*N; i += N) {
+      if (i == small_idx) 
+        continue; 
+      char status = meta_board[i].status; 
+      if (status == player) iWon += 1; 
+      if (status == opp) opWon += 1; 
+      if (status == 1) fail += 1; 
+    }
+
+    if (iWon == 2 && fail == 0 && opWon == 0) myScore += 4; 
+    if (opWon == 2) hisScore -= 4; 
+
+    if (metaDiag1) { 
+      opWon = 0;  
+      iWon = 1; 
+      fail = 0; 
+      for (int i = 0; i < N*N; i += 4) {
+        if (i == small_idx) 
+          continue; 
+        char status = meta_board[i].status; 
+        if (status == player) iWon += 1; 
+        if (status == opp) opWon += 1; 
+        if (status == 1) fail += 1; 
+      }
+      if (iWon == 2 && fail == 0 && opWon == 0) myScore += 4; 
+      if (opWon == 2) hisScore -= 4; 
+    }
+
+    if (metaDiag2) { 
+      opWon = 0;  
+      iWon = 1; 
+      fail = 0; 
+      for (int i = 2; i < N*N-1; i += 2) {
+        if (i == small_idx) 
+          continue; 
+        char status = meta_board[i].status; 
+        if (status == player) iWon += 1; 
+        if (status == opp) opWon += 1; 
+        if (status == 1) fail += 1; 
+      }
+      if (iWon == 2 && fail == 0 && opWon == 0) myScore += 4; 
+      if (opWon == 2) hisScore -= 4; 
+    }
+  }
+
+  if (player == 'O') { 
+    res[0] = myScore;
+    res[1] = hisScore; 
+  } else {
+    res[0] = hisScore;
+    res[1] = myScore;
+  }
+
+  return res;
 }
 
 
