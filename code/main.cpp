@@ -20,7 +20,7 @@ int min(int a, int b) {
 int max(int a, int b) {
   return (a > b) ? a : b;
 }
-void updateCLI(char *board, int numTurns) {
+void updateCLI(char *board) {
   for(int c = 0; c < N; c++) {
     printf(" -");
   }
@@ -39,9 +39,17 @@ void updateCLI(char *board, int numTurns) {
     for(int c = 0; c < N; c++) {
       printf(" -");
     }
+    // printf("\n");
+  }
+}
+void updateMetaCLI(board_t *meta_board) {
+  for(int r = 0; r < N; r++) {
+    for(int c = 0; c < N; c++) {
+      updateCLI(meta_board[r*N+c].board);
+    }
     printf("\n");
   }
-  printf("numTurn = %d\n", numTurns);
+  printf("abc\n");
 }
 
 /**
@@ -105,7 +113,6 @@ int calculateSmallBoardScore(char *board, char bot, char player) {
 
   if (diagScoreTwo >= 2 || diagScoreTwo <= -2) 
       score += diagScoreTwo; 
-
   return score; 
 
 }
@@ -178,34 +185,38 @@ bool isWinner(int row, int col, char* board, char player) {
  * botMaximizing - true if its the bot's turn
  * keep track of how many X's and O's have already been placed on the board
  */
-node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing, 
+node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximizing, 
   char* abBoard, int numTurns, int num_of_threads) {
   char* board = (char *) malloc(N*N*sizeof(char));
   memcpy(board, abBoard, N*N);
-  if(numTurns == 6) printf("%d\n", (int)botMaximizing);
-  if(botMaximizing) {
-    board[node.row*N+node.col] = 'O';
-    if(isWinner(node.row, node.col, board, 'O')) {
-      node_t res = node_t();
-      res.value = INT_MAX;
-      res.row = node.row;
-      res.col = node.col;
-      return res;
-    } 
+
+  if(nodePtr != NULL) {
+    node_t node = *nodePtr;
+    if(botMaximizing) {
+      board[node.row*N+node.col] = 'O';
+      if(isWinner(node.row, node.col, board, 'O')) {
+        node_t res = node_t();
+        res.value = INT_MAX;
+        res.row = node.row;
+        res.col = node.col;
+        return res;
+      } 
+    }
+    else {
+      board[node.row*N+node.col] = 'X';
+      if(isWinner(node.row, node.col, board, 'X')) {
+        node_t res = node_t();
+        res.value = INT_MIN;
+        res.row = node.row;
+        res.col = node.col;
+        return res;
+      } 
+    }
   }
-  else {
-    board[node.row*N+node.col] = 'X';
-    if(isWinner(node.row, node.col, board, 'X')) {
-      node_t res = node_t();
-      res.value = INT_MIN;
-      res.row = node.row;
-      res.col = node.col;
-      return res;
-    } 
-  }
+  
   int numChildren = (N*N) - numTurns;
   if(depth == 0 || numChildren == 0) {
-    return node;
+    return *nodePtr;
   }
   //generate tree
   node_t *children = (node_t *) malloc(numChildren * sizeof(node_t));
@@ -231,7 +242,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     int i;
     // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
-      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
+      node_t ab = alphabeta(&(children[i]), depth-1, alpha, beta, !botMaximizing, 
         board, numTurns+1, num_of_threads);
       if(ab.value > result.value) {
         result.value = ab.value;
@@ -247,7 +258,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     int i;
     // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
-      node_t ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, 
+      node_t ab = alphabeta(&(children[i]), depth-1, alpha, beta, !botMaximizing, 
         board, numTurns+1, num_of_threads);
       if(ab.value < result.value) {
         result.value = ab.value;
@@ -301,7 +312,7 @@ int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char pl
   if (isWinner(row, col, local_board, player))
     meta_board[local_board_idx].status = player; 
 
-  if (boardComplete(local_board))
+  if (boardComplete(local_board)) //tie
     meta_board[local_board_idx].status = 1; 
 
   int next_board_idx = row*N+col; 
@@ -370,7 +381,7 @@ int main(int argc, const char *argv[]) {
   }
 
   //TODO: take this out 
-  char* board = meta_board[0].board; 
+  // char* board = meta_board[0].board; 
 
   int num_of_threads = get_option_int("-n", 1);
 
@@ -387,13 +398,16 @@ int main(int argc, const char *argv[]) {
     char winner;
     int numTurns = 1;
 
+    int nextIsTBD; //if next mini board is not yet decided because the calculated one is already completed
+
     //TODO start with random row and column 
     node_t root = node_t();
     root.row = 1;
     root.col = 1;
     // root.value = calculateValue(board, 1,1, false);
-    root.value = calculateSmallBoardScore(board, 'O', 'X');
-    board[4] = 'O';
+    root.value = calculateSmallBoardScore(meta_board[0].board, 'O', 'X');
+    makeMove(meta_board, root.row*N+root.col, root.row, root.col, 'O');
+    // board[4] = 'O';
     while(1) {
       //let user go first. wait for input.
       /*node_t root = readInput();
@@ -409,39 +423,91 @@ int main(int argc, const char *argv[]) {
         printf("Tie!\n");
         break;
       }*/
+      if(numTurns % 10000 == 0) updateMetaCLI(meta_board);
       if(!(root.row != 1 && root.col != 1)) {
-        node_t res0 = alphabeta(root, 2, INT_MIN, INT_MAX, false, board, 
-          1, num_of_threads);
-        board[res0.row*N+res0.col] = 'O';
-        updateCLI(board, numTurns+1);
-        if(isWinner(res0.row, res0.col, board, 'O')) {
+        int nextIndex0;
+        if(nextIsTBD) {
+          //TODO meta_board -> char* board
+          char *tempBoard = (char *) calloc(N*N, sizeof(char));
+          for(int i = 0; i < N; i++) {
+            for(int j = 0; j < N; j++) {
+              tempBoard[i*N+j] = meta_board[i*N+j].status;
+            }
+          }
+          node_t metaRes = alphabeta(&root, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+          free(tempBoard);
+          nextIndex0 = metaRes.row*N+metaRes.col;
+        } else {
+          nextIndex0 = root.row*N+root.col;
+        }
+        int mm0 = makeMove(meta_board, nextIndex0, root.row, root.col, 'X');
+        node_t res0 = alphabeta(&root, 2, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
+            1, num_of_threads);
+        if(mm0 != nextIndex0 ) {
+          nextIsTBD = true;
+        } else {
+          nextIsTBD = false;
+        }
+        if(isMetaWinner(meta_board, 'O')) {
           winner = 'O';
+          updateMetaCLI(meta_board);
           printf("O Won!\n");
-          break;
+          break; 
+        }
+        if(isWinner(res0.row, res0.col, meta_board[nextIndex0].board, 'O')) {
+          // winner = 'O';
+          printf("O Won mini board\n");
+          // break;
         }
         numTurns++;
         if(numTurns == N*N) {
-          printf("Tie!\n");
-          break;
+          // printf("Tie!\n");
+          // break;
         }
         root.row = res0.row;
         root.col = res0.col;
         root.value = res0.value;
       }
       
-      node_t res = alphabeta(root, 2, INT_MIN, INT_MAX, true, board, 
-        1, num_of_threads);
-      board[res.row*N+res.col] = 'X';
-      updateCLI(board, numTurns+1);
-      if(isWinner(res.row, res.col, board, 'X')) {
+      int nextIndex;
+      if(nextIsTBD) {
+        char *tempBoard = (char *) calloc(N*N, sizeof(char));
+        for(int i = 0; i < N; i++) {
+          for(int j = 0; j < N; j++) {
+            tempBoard[i*N+j] = meta_board[i*N+j].status;
+          }
+        }
+        node_t metaRes = alphabeta(&root, 2, INT_MIN, INT_MAX, true, tempBoard, 1, num_of_threads);
+        free(tempBoard);
+        nextIndex = metaRes.row*N+metaRes.col;
+      }
+      else {
+        nextIndex = root.row*N+root.col;
+      }
+      node_t res = alphabeta(&root, 2, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
+          1, num_of_threads);
+      int mm = makeMove(meta_board, root.row*N+root.col, root.row, root.col, 'X');
+
+      if(mm != nextIndex) {
+        nextIsTBD = true;
+      } else {
+        nextIsTBD = false;
+      }
+      if(isMetaWinner(meta_board, 'X')) {
         winner = 'X';
+        updateMetaCLI(meta_board);
         printf("X Won!\n");
         break;
       }
+      if(isWinner(res.row, res.col, meta_board[nextIndex].board, 'X')) {
+        // winner = 'X';
+        // printf("X Won mini board\n");
+        // break;
+      }
       numTurns++;
       if(numTurns == N*N) {
-        printf("Tie!\n");
-        break;
+        // printf("Tie on mini board\n");
+        // break;
       }
       root.row = res.row;
       root.col = res.col;
@@ -449,8 +515,8 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  //write output to file
-  char output_filename[BUFSIZE];
+  //TODO write output to file
+  /*char output_filename[BUFSIZE];
   sprintf(output_filename, "output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
   if (!output_file) {
@@ -477,8 +543,8 @@ int main(int argc, const char *argv[]) {
     }
     fprintf(output_file, "\n");
   }
-  fclose(output_file);
+  fclose(output_file); */
 
-  free(board);
+  free(meta_board);
   return 0;
 }
