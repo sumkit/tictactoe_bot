@@ -56,7 +56,8 @@ void updateMetaCLI(board_t *meta_board) {
     printf("\n");
   }
   printf("\n");
-  /*for(int c = 0; c < N*N; c++) {
+  
+  for(int c = 0; c < N*N; c++) {
     printf(" -");
   }
   printf("\n");
@@ -80,14 +81,14 @@ void updateMetaCLI(board_t *meta_board) {
   for(int c = 0; c < N*N; c++) {
     printf(" -");
   }
-  printf("\n");*/
-  for(int r = 0; r < N; r++) {
+  printf("\n");
+  /*for(int r = 0; r < N; r++) {
     for(int c = 0; c < N; c++) {
       printf("r = %d, c = %d\n", r, c);
       updateCLI(meta_board[r*N+c].board);
       printf("\n");
     }
-  }
+  } */
 }
 
 /**
@@ -167,6 +168,12 @@ bool isWinner(int row, int col, char* board, char player, int metaIndex, bool fr
   bool rowWin = false;
   bool colWin = false; 
   bool diagWin = true; 
+
+  if(fromMakeMove) {
+    if((int) board[row*N+col] != 0) {
+      printf("p = %c, meta = %d, row = %d, col = %d\n", player, metaIndex, row, col);
+    }
+  }
 
   for (int i = 0; i < N; i++) { 
     rowWin = true; 
@@ -248,11 +255,14 @@ int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char pl
   } */
   meta_board[local_board_idx].board[next_board_idx] = player; 
   meta_board[local_board_idx].numFilled++;
+  // if(meta_board[local_board_idx].numFilled++ > N*N) {
+  //   printf("num %d. local_board_idx %d\n", meta_board[local_board_idx].numFilled, local_board_idx);
+  // }
   // printf("player: %c, local_board_idx: %d, row: %d, col: %d\n", player, local_board_idx, row, col);
-  /*if (isWinner(row, col, meta_board[row*N+col].board, player, local_board_idx, true)) {
+  if (isWinner(row, col, meta_board[row*N+col].board, player, local_board_idx, true)) {
     meta_board[local_board_idx].status = player; 
-    printf("index = %d, p = %c\n", local_board_idx, player);
-  } */
+    // printf("index = %d, p = %c\n", local_board_idx, player);
+  } 
 
   if (boardComplete(meta_board[row*N+col].board)) //tie
     meta_board[local_board_idx].status = 1; 
@@ -305,7 +315,7 @@ int calculateValue(char *board, int row, int col, char player) {
  * keep track of how many X's and O's have already been placed on the board
  */
 node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximizing, 
-  char* abBoard, int numTurns, int num_of_threads) {
+  char* abBoard, int num_of_threads, board_t *meta_board, int metaIndex) {
   char* board = (char *) malloc(N*N*sizeof(char));
   memcpy(board, abBoard, N*N);
   if(nodePtr != NULL) {
@@ -336,11 +346,11 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
   int numChildren = 0;
   for(int r = 0; r < N; r++) {
     for(int c = 0; c < N; c++) {
-      if((int)board[r*N+c] == 0) numChildren++;
+      if((int)board[r*N+c] == 0) {
+        numChildren++;
+      }
     }
   }
-  if(numChildren != ((N*N)-numTurns)) 
-    printf("numChildren = %d, numTurns = %d\n", numChildren, (N*N)-numTurns);
   if(depth == 0 || numChildren == 0) {
     return *nodePtr;
   }
@@ -369,7 +379,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
     // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(&(children[i]), depth-1, alpha, beta, !botMaximizing, 
-        board, numTurns+1, num_of_threads);
+        board, num_of_threads, meta_board, metaIndex);
       if(ab.value > result.value) {
         result.value = ab.value;
         result.row = ab.row;
@@ -385,7 +395,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
     // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = alphabeta(&(children[i]), depth-1, alpha, beta, !botMaximizing, 
-        board, numTurns+1, num_of_threads);
+        board, num_of_threads, meta_board, metaIndex);
       if(ab.value < result.value) {
         result.value = ab.value;
         result.row = ab.row;
@@ -727,14 +737,14 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, numCompleteBoards, num_of_threads);
+          node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads, meta_board, -1);
           free(tempBoard);
           nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
-        node_t res0 = alphabeta(&root, 1, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
-            meta_board[nextIndex0].numFilled, num_of_threads);
+        node_t res0 = alphabeta(&root, 1, INT_MIN, INT_MAX, true, meta_board[nextIndex0].board, num_of_threads, 
+          meta_board, nextIndex0);
         int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
         // printf("meta = %d, row = %d, col = %d\n", nextIndex0, res0.row, res0.col);
         // updateMetaCLI(meta_board);
@@ -756,7 +766,8 @@ int main(int argc, const char *argv[]) {
         }
         numTurns++;
         if(numTurns == N*N*N*N) {
-          printf("Tie!\n");
+          printf("Tie! %d\n", numTurns);
+          updateMetaCLI(meta_board);
           break;
         }
         root.row = res0.row;
@@ -773,15 +784,15 @@ int main(int argc, const char *argv[]) {
             tempBoard[i*N+j] = meta_board[i*N+j].status;
           }
         }
-        node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, numCompleteBoards, num_of_threads);
+        node_t metaRes = alphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads, meta_board, -1);
         free(tempBoard);
         nextIndex = metaRes.row*N+metaRes.col;
       }
       else {
         nextIndex = root.row*N+root.col;
       }
-      node_t res = alphabeta(&root, 1, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
-          meta_board[nextIndex].numFilled, num_of_threads);
+      node_t res = alphabeta(&root, 1, INT_MIN, INT_MAX, false, meta_board[nextIndex].board, num_of_threads,
+        meta_board, nextIndex);
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
       // printf("meta = %d, row = %d, col = %d\n", nextIndex, res.row, res.col);
       // updateMetaCLI(meta_board);
@@ -803,7 +814,8 @@ int main(int argc, const char *argv[]) {
       }
       numTurns++;
       if(numTurns == N*N*N*N) {
-        printf("Tie!\n");
+        printf("Tie! %d\n", numTurns);
+        updateMetaCLI(meta_board);
         break;
       }
       root.row = res.row;
