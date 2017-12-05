@@ -56,7 +56,7 @@ void updateMetaCLI(board_t *meta_board) {
     printf("\n");
   }
   printf("\n");
-  for(int c = 0; c < N*N; c++) {
+  /*for(int c = 0; c < N*N; c++) {
     printf(" -");
   }
   printf("\n");
@@ -80,7 +80,14 @@ void updateMetaCLI(board_t *meta_board) {
   for(int c = 0; c < N*N; c++) {
     printf(" -");
   }
-  printf("\n");
+  printf("\n");*/
+  for(int r = 0; r < N; r++) {
+    for(int c = 0; c < N; c++) {
+      printf("r = %d, c = %d\n", r, c);
+      updateCLI(meta_board[r*N+c].board);
+      printf("\n");
+    }
+  }
 }
 
 /**
@@ -148,7 +155,7 @@ int calculateSmallBoardScore(char *board, char bot, char player) {
 //for mini board
 bool boardComplete(char* local_board) { 
   for (int i = 0; i < N*N; i++) { 
-    if (local_board[i] == 0)
+    if ((int)local_board[i] == 0)
       return false;
   }
 
@@ -156,7 +163,7 @@ bool boardComplete(char* local_board) {
 }
 
 //for mini board
-bool isWinner(int row, int col, char* board, char player) {
+bool isWinner(int row, int col, char* board, char player, int metaIndex, bool fromMakeMove) {
   bool rowWin = false;
   bool colWin = false; 
   bool diagWin = true; 
@@ -164,11 +171,12 @@ bool isWinner(int row, int col, char* board, char player) {
   for (int i = 0; i < N; i++) { 
     rowWin = true; 
     for (int j = 0; j < N; j++) { 
-      if (board[i*N + j] != player)
-        rowWin = false; 
+      if (board[i*N + j] != player) rowWin = false; 
     }
     if (rowWin) {
-      // printf("row i = %d\n", i);
+      /*if(fromMakeMove) {
+        updateCLI(board);
+        printf("row i = %d, meta index = %d\n", i, metaIndex);}*/
       return true;
     } 
   }
@@ -176,12 +184,12 @@ bool isWinner(int row, int col, char* board, char player) {
   for (int i = 0; i < N; i++) { 
     colWin = true; 
     for (int j = 0; j<N; j++) { 
-      if(board[i + j*N] != player)
-        colWin = false;
+      if(board[i + j*N] != player) colWin = false;
     }
     if (colWin) {
-      // printf("col i = %d\n", i);
-      return true; }
+      // if(fromMakeMove) printf("col i = %d, meta index = %d\n", i, metaIndex);
+      return true; 
+    }
   }
 
   for (int i = 0; i < N; i++) { 
@@ -189,7 +197,7 @@ bool isWinner(int row, int col, char* board, char player) {
       diagWin = false; 
   }
   if (diagWin) {
-    // printf("diag 1 \n");
+    // if(fromMakeMove) printf("diag 1, meta index = %d\n", metaIndex);
     return true; 
   }
 
@@ -199,7 +207,7 @@ bool isWinner(int row, int col, char* board, char player) {
         diagWin = false;
   }
   if (diagWin) {
-    // printf("diag 2 \n");
+    // if(fromMakeMove) printf("diag 2, meta index = %d\n", metaIndex);
     return true;
   } 
 
@@ -234,15 +242,22 @@ bool isWinner(int row, int col, char* board, char player) {
 //if that board is complete, returns -1 
 int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
   int next_board_idx = row*N+col; 
+  /*if(meta_board[local_board_idx].board[next_board_idx] != 0) {
+    printf("dumb nuts local = %d r = %d, c = %d\n", local_board_idx, row, col);
+    updateCLI(meta_board[local_board_idx].board);
+  } */
   meta_board[local_board_idx].board[next_board_idx] = player; 
   meta_board[local_board_idx].numFilled++;
-  if (isWinner(row, col, meta_board[row*N+col].board, player))
+  // printf("player: %c, local_board_idx: %d, row: %d, col: %d\n", player, local_board_idx, row, col);
+  /*if (isWinner(row, col, meta_board[row*N+col].board, player, local_board_idx, true)) {
     meta_board[local_board_idx].status = player; 
+    printf("index = %d, p = %c\n", local_board_idx, player);
+  } */
 
   if (boardComplete(meta_board[row*N+col].board)) //tie
     meta_board[local_board_idx].status = 1; 
 
-  if (meta_board[next_board_idx].status == 0) 
+  if ((int)meta_board[next_board_idx].status == 0) 
     return next_board_idx; 
 
   return -1; 
@@ -297,7 +312,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
     node_t node = *nodePtr;
     if(botMaximizing) {
       board[node.row*N+node.col] = 'O';
-      if(isWinner(node.row, node.col, board, 'O')) {
+      if(isWinner(node.row, node.col, board, 'O', 0, false)) {
         node_t res = node_t();
         res.value = INT_MAX;
         res.row = node.row;
@@ -308,7 +323,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
     }
     else {
       board[node.row*N+node.col] = 'X';
-      if(isWinner(node.row, node.col, board, 'X')) {
+      if(isWinner(node.row, node.col, board, 'X', 0, false)) {
         node_t res = node_t();
         res.value = INT_MIN;
         res.row = node.row;
@@ -318,7 +333,14 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
     }
   } 
   
-  int numChildren = (N*N) - numTurns;
+  int numChildren = 0;
+  for(int r = 0; r < N; r++) {
+    for(int c = 0; c < N; c++) {
+      if((int)board[r*N+c] == 0) numChildren++;
+    }
+  }
+  if(numChildren != ((N*N)-numTurns)) 
+    printf("numChildren = %d, numTurns = %d\n", numChildren, (N*N)-numTurns);
   if(depth == 0 || numChildren == 0) {
     return *nodePtr;
   }
@@ -328,7 +350,7 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
   for(int i = 0; i < N; i++) {
     for(int j = 0; j < N; j++) {
       int index = i*N + j;
-      if(board[index] == 0) {
+      if((int)board[index] == 0) {
         int val = calculateSmallBoardScore(board, botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O');
         // int val = calculateValue(board, i, j, botMaximizing ? 'O' : 'X');
         node_t temp = node_t();
@@ -340,7 +362,6 @@ node_t alphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximi
       }
     }
   }
-
   node_t result = node_t();
   if(botMaximizing) {
     result.value = INT_MIN;
@@ -541,7 +562,7 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
     if (opWon == 2) hisScore -= 2; 
   }
 
-  if (isWinner(row, col, board, player)) {
+  if (isWinner(row, col, board, player, 0, false)) {
 
     if (isMetaWinner(meta_board, player)) {
       res[0] = INT_MAX;
@@ -678,6 +699,7 @@ int main(int argc, const char *argv[]) {
     // root.value = calculateValue(board, 1,1, false);
     root.value = calculateSmallBoardScore(meta_board[0].board, 'O', 'X');
     makeMove(meta_board, 0, root.row, root.col, 'O');
+    bool firstMove = true;
     while(1) {
       //let user go first. wait for input.
       /*node_t root = readInput();
@@ -695,7 +717,7 @@ int main(int argc, const char *argv[]) {
       }*/
 
       //TODO change this to check if it is the first turn or not instead of hardcoded coordinates
-      if(!(root.row == 1 && root.col == 1)) {
+      if(!firstMove) {
         int nextIndex0;
         if(nextIsTBD) {
           //TODO meta_board -> char* board
@@ -711,9 +733,12 @@ int main(int argc, const char *argv[]) {
         } else {
           nextIndex0 = root.row*N+root.col;
         }
-        node_t res0 = alphabeta(&root, 2, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
+        node_t res0 = alphabeta(&root, 1, INT_MIN, INT_MAX, false, meta_board[nextIndex0].board, 
             meta_board[nextIndex0].numFilled, num_of_threads);
         int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
+        // printf("meta = %d, row = %d, col = %d\n", nextIndex0, res0.row, res0.col);
+        // updateMetaCLI(meta_board);
+
         if(mm0 != res0.row*N+res0.col ) {
           nextIsTBD = true;
           numCompleteBoards++;
@@ -726,7 +751,7 @@ int main(int argc, const char *argv[]) {
           updateMetaCLI(meta_board);
           break; 
         }
-        if(isWinner(res0.row, res0.col, meta_board[nextIndex0].board, 'O')) {
+        if(isWinner(res0.row, res0.col, meta_board[nextIndex0].board, 'O', 0, false)) {
           // printf("O Won mini board\n");
         }
         numTurns++;
@@ -755,9 +780,11 @@ int main(int argc, const char *argv[]) {
       else {
         nextIndex = root.row*N+root.col;
       }
-      node_t res = alphabeta(&root, 2, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
+      node_t res = alphabeta(&root, 1, INT_MIN, INT_MAX, true, meta_board[nextIndex].board, 
           meta_board[nextIndex].numFilled, num_of_threads);
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
+      // printf("meta = %d, row = %d, col = %d\n", nextIndex, res.row, res.col);
+      // updateMetaCLI(meta_board);
 
       if(mm != res.row*N+res.col) {
         nextIsTBD = true;
@@ -771,7 +798,7 @@ int main(int argc, const char *argv[]) {
         updateMetaCLI(meta_board);
         break;
       }
-      if(isWinner(res.row, res.col, meta_board[nextIndex].board, 'X')) {
+      if(isWinner(res.row, res.col, meta_board[nextIndex].board, 'X', 0, false)) {
         // printf("X Won mini board\n");
       }
       numTurns++;
@@ -782,6 +809,7 @@ int main(int argc, const char *argv[]) {
       root.row = res.row;
       root.col = res.col;
       root.value = res.value;
+      if(firstMove) firstMove = false;
     }
   }
 
