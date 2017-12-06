@@ -135,93 +135,8 @@ bool isWinner(int row, int col, char* board, char player) {
   } 
 
   return false;
-
-  /*bool rowWin = true;
-  bool colWin = true;
-  bool fwdDiagWin = row == col;
-  bool backDiagWin = row == N-(col+1);
-  for(int i = 0; i < N; i++) {
-    if(colWin && board[i*N+col] != player) {
-      //check col
-      colWin = false;
-    }
-    if(rowWin && board[row*N+i] != player) {
-      //check row
-      rowWin = false;
-    }
-    if(fwdDiagWin && board[i*N+i] != player) {
-      //check diagonal
-      fwdDiagWin = false;
-    }
-    if(backDiagWin && board[i*N+(N-(i+1))] != player) {
-      //other diagonal (0, 2) (1, 1)
-      backDiagWin = false;
-    }
-  }
-  return rowWin || colWin || fwdDiagWin || backDiagWin;*/
 }
 
-/**
- * Calculate the heuristic of playing a letter on a square for this player
- * player either equals 'X' (user) or 'O' (bot)
- * make sure AI blocks when player is about to win 
- * https://en.wikipedia.org/wiki/Tic-tac-toe 
- */
-/*int calculateSmallBoardScore(char *board, char bot, char player) { 
-  int center = 1 * N + 1; 
-  int score = 0; 
-  if (board[center] == bot) 
-    score += 3;
-  else if (board[center] == player)  
-    score -= 3; 
-  
-  int diagScoreOne = 0;
-  int diagScoreTwo = 0; 
-
-  for (int i = 0; i < N; i++) { 
-    int colScore = 0; 
-    for (int col = 0; col < N; col++) { 
-      if (board[i*N+col] == bot) 
-        colScore += 1;
-      else if (board[i*N+col] == player) 
-        colScore -= 1; 
-    }
-
-    if (colScore >= 2 || colScore <= -2) 
-      score += colScore; 
-
-    int rowScore = 0; 
-    for (int row = 0; row < N; row++) { 
-      if (board[row*N + i] == bot) 
-        rowScore += 1; 
-      else if (board[row * N + i] == player) 
-        rowScore -= 1; 
-    }
-
-    if (rowScore >= 2 || rowScore <= -2) 
-      score += rowScore; 
-
-    if (board[i*N+i] == bot) 
-      diagScoreOne += 1; 
-    else if (board[i*N+i] == player)
-      diagScoreOne -= 1; 
-
-    if (board[i*N+(N-(i+1))] == bot) 
-      diagScoreTwo += 1;
-    else if (board[i*N + (N-(i+1))] == player)
-      diagScoreTwo -= 1; 
-
-  }
-
-  if (diagScoreOne >= 2 || diagScoreOne <= -2) 
-      score += diagScoreOne; 
-
-
-  if (diagScoreTwo >= 2 || diagScoreTwo <= -2) 
-      score += diagScoreTwo; 
-  return score; 
-
-}*/
 
 int* calculateSmallBoardScore(char* board, int row, int col, 
   char player, char opp, int* oldScore) {
@@ -354,41 +269,6 @@ int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char pl
   return -1; 
 }
 
-int calculateValue(char *board, int row, int col, char player) {
-  int rowSquare = 1;
-  int colSquare = 1;
-  int diagSquare = 1;
-  int value = 0;
-  
-  for(int i = 0; i < N; i++) {
-    //check col
-    if(board[row*N+i] == player) {
-      value+=(colSquare*colSquare);
-      colSquare++;
-    }
-    if(board[row*N+i] == 0) {
-      value++;
-    }
-    //check row
-    if(board[i*N+col] == player) {
-      value+=(rowSquare*rowSquare);
-      rowSquare++;
-    }
-    if(board[i*N+col] == 0) {
-      value++;
-    }
-    //check diagonal
-    if(board[i*N+i] == player) {
-      value += (diagSquare*diagSquare);
-      diagSquare++;
-    }
-    if(board[i*N+i] == 0) {
-      value++;
-    }
-  }
-  return value;
-}
-
 /**
  * alpha - worst case for maximizing player
  * beta - best case for minimizing player
@@ -434,6 +314,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
         temp.row = i;
         temp.col = j;
+        temp.metaIdx = metaIndex; 
         children[childIndex] = temp;
         childIndex++;
         free(val);
@@ -458,6 +339,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         ab.value = INT_MAX;
         ab.row = children[i].row;
         ab.col = children[i].col;
+        ab.metaIdx = metaIndex; 
       } 
       else {
         ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, num_of_threads, 
@@ -469,6 +351,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
+        result.metaIdx = metaIndex; 
       }
       alpha = max(alpha, result.value);
       if(beta <= alpha) break;
@@ -488,6 +371,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         ab.value = INT_MIN;
         ab.row = children[i].row;
         ab.col = children[i].col;
+        ab.metaIdx = metaIndex;
       } 
       else {
         ab = alphabeta(children[i], depth-1, alpha, beta, !botMaximizing, num_of_threads, 
@@ -499,6 +383,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
+        result.metaIdx = metaIndex;
       }
       beta = min(beta, result.value);
       if(beta <= alpha) break;
@@ -522,6 +407,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
         res.value = INT_MAX;
         res.row = node.row;
         res.col = node.col;
+        res.metaIdx = node.row*N + node.col;
         return res;
       } 
 
@@ -533,6 +419,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
         res.value = INT_MIN;
         res.row = node.row;
         res.col = node.col;
+        res.metaIdx = node.row*N + node.col;
         return res;
       } 
     }
@@ -568,6 +455,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
         temp.row = i;
         temp.col = j;
         children[childIndex] = temp;
+        temp.metaIdx = i*N + j;
         childIndex++;
         free(val);
       }
@@ -584,6 +472,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
+        result.metaIdx = ab.row*N+ab.col;
       }
       alpha = max(alpha, result.value);
     }
@@ -598,6 +487,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
+        result.metaIdx = ab.row*N+ab.col;
       }
       beta = min(beta, result.value);
     }
@@ -842,6 +732,7 @@ int main(int argc, const char *argv[]) {
     node_t root = node_t();
     root.row = 1;
     root.col = 1;
+    root.metaIdx = 0;
     // root.value = calculateValue(board, 1,1, false);
     int* scoreArr = (int *) malloc(2*sizeof(int));
     scoreArr[0] = 0;
@@ -881,15 +772,15 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
+          node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard,num_of_threads);
           free(tempBoard);
-          nextIndex0 = metaRes.row*N+metaRes.col;
+          nextIndex0 = metaRes.metaIdx;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
         
         node_t res0 = alphabeta(root, depth, INT_MIN, INT_MAX, true, num_of_threads, meta_board, nextIndex0);
-        int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
+        int mm0 = makeMove(meta_board, res0.metaIdx, res0.row, res0.col, 'O');
         // updateMetaCLI(meta_board);
 
         if(mm0 != res0.row*N+res0.col ) {
@@ -925,13 +816,13 @@ int main(int argc, const char *argv[]) {
         }
         node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
         free(tempBoard);
-        nextIndex = metaRes.row*N+metaRes.col;
+        nextIndex = metaRes.metaIdx;
       }
       else {
         nextIndex = root.row*N+root.col;
       }
       node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
-      int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
+      int mm = makeMove(meta_board, res.metaIdx, res.row, res.col, 'X');
       updateMetaCLI(meta_board);
 
       if(mm != res.row*N+res.col) {

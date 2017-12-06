@@ -3,6 +3,7 @@ struct node_t {
   int value;
   int row;
   int col;
+  int metaIdx; 
 };
 
 struct board_t { 
