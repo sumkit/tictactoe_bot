@@ -352,8 +352,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 0;
       if(ab.value > result.value) {
         result.value = ab.value;
-        result.row = ab.row;
-        result.col = ab.col;
+        result.row = children[i].row;
+        result.col = children[i].col;
         result.metaIdx = ab.metaIdx; //metaIndex 
       }
       alpha = max(alpha, result.value);
@@ -384,8 +384,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 0;
       if(ab.value < result.value) {
         result.value = ab.value;
-        result.row = ab.row;
-        result.col = ab.col;
+        result.row = children[i].row;
+        result.col = children[i].col;
         result.metaIdx = ab.metaIdx;
       }
       beta = min(beta, result.value);
@@ -473,8 +473,8 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, false, board, num_of_threads);
       if(ab.value > result.value) {
         result.value = ab.value;
-        result.row = ab.row;
-        result.col = ab.col;
+        result.row = children[i].row;
+        result.col = children[i].row;
         result.metaIdx = ab.row*N+ab.col;
       }
       alpha = max(alpha, result.value);
@@ -488,8 +488,8 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, true, board, num_of_threads);
       if(ab.value < result.value) {
         result.value = ab.value;
-        result.row = ab.row;
-        result.col = ab.col;
+        result.row = children[i].row;
+        result.col = children[i].col;
         result.metaIdx = ab.row*N+ab.col;
       }
       beta = min(beta, result.value);
@@ -729,7 +729,7 @@ int main(int argc, const char *argv[]) {
     int numTurns = 1;
 
     int nextIsTBD = false; //if next mini board is not yet decided because the calculated one is already completed
-    int depth = 4;
+    int depth = 2;
 
     //TODO start with random row and column 
     node_t root = node_t();
@@ -777,13 +777,13 @@ int main(int argc, const char *argv[]) {
           }
           node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard,num_of_threads);
           free(tempBoard);
-          nextIndex0 = metaRes.metaIdx;
+          nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
         
         node_t res0 = alphabeta(root, depth, INT_MIN, INT_MAX, true, num_of_threads, meta_board, nextIndex0);
-        int mm0 = makeMove(meta_board, res0.metaIdx, res0.row, res0.col, 'O');
+        int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
         // updateMetaCLI(meta_board);
 
         if(mm0 != res0.row*N+res0.col ) {
@@ -819,14 +819,14 @@ int main(int argc, const char *argv[]) {
         }
         node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
         free(tempBoard);
-        nextIndex = metaRes.metaIdx;
+        nextIndex = metaRes.row * N + metaRes.col;
       }
       else {
         nextIndex = root.row*N+root.col;
       }
       node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
-      printf("X meta index = %d\n", res.metaIdx);
-      int mm = makeMove(meta_board, res.metaIdx, res.row, res.col, 'X');
+      //printf("X meta index = %d\n", res.metaIdx);
+      int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
       updateMetaCLI(meta_board);
 
       if(mm != res.row*N+res.col) {
