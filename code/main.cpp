@@ -42,25 +42,31 @@ void updateCLI(char *board) {
     printf("\n");
   }
 }
-void updateMetaCLI(board_t *meta_board) {
-  printf("META: \n");
+void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
+  if(file) fprintf(output_file, "META: \n");
+  else printf("META: \n");
   for(int i = 0; i < N; i++) {
     for(int j = 0; j < N; j++) {
       char temp = meta_board[i*N+j].status;
       if(temp == 0) {
-        printf(" |");
+        if(file) fprintf(output_file, " |");
+        else printf(" |");
       } else {
-        printf("%c|", temp);
+        if(file) fprintf(output_file, "%c|", temp);
+        else printf("%c|", temp);
       }
     }
-    printf("\n");
+    if(file) fprintf(output_file, "\n");
+    else printf("\n");
   }
   printf("\n");
   
   for(int c = 0; c < N*N; c++) {
-    printf(" -");
+    if(file) fprintf(output_file, " -");
+    else printf(" -");
   }
-  printf("\n");
+  if(file) fprintf(output_file, "\n");
+  else printf(" -");
   int nonBlank = 0;
   for(int n = 0; n < N; n++) {
     //TODO show if the meta_board square is a win or tie 
@@ -69,22 +75,27 @@ void updateMetaCLI(board_t *meta_board) {
         for(int c = 0; c < N; c++) {
             char temp = meta_board[n*N+n1].board[r*N+c];
           if(temp == 0) {
-            printf(" |");
+            if(file) fprintf(output_file, " |");
+            else printf(" |");
           } else {
-            printf("%c|", temp);
+            if(file) fprintf(output_file, "%c|", temp);
+            else printf("%c|", temp);
             nonBlank++;
           }
         }
       }
-      if(r < N-1) printf("\n");
+      if(r < N-1) {
+        if(file) fprintf(output_file, "\n");
+        else printf("\n");
+      }
     }
     printf("\n");
   }
   for(int c = 0; c < N*N; c++) {
     printf(" -");
   }
-  printf("\n");
-  printf("num blank = %d\n", nonBlank);
+  if(file) fprintf(output_file, "\n");
+  else printf("\n");
   /*for(int r = 0; r < N; r++) {
     for(int c = 0; c < N; c++) {
       printf("r = %d, c = %d\n", r, c);
@@ -331,7 +342,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'O';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'O';
@@ -357,13 +368,13 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.metaIdx = ab.metaIdx; //metaIndex 
       }
       alpha = max(alpha, result.value);
-      if(beta <= alpha) break;
+      // if(beta <= alpha) break;
     }
   }
   else {
     result.value = INT_MAX;
     int i;
-    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'X';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'X';
@@ -389,7 +400,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.metaIdx = ab.metaIdx;
       }
       beta = min(beta, result.value);
-      if(beta <= alpha) break;
+      // if(beta <= alpha) break;
     }
   }
   free(children);
@@ -468,7 +479,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, false, board, num_of_threads);
       if(ab.value > result.value) {
@@ -483,7 +494,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
   else {
     result.value = INT_MAX;
     int i;
-    // #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, true, board, num_of_threads);
       if(ab.value < result.value) {
@@ -721,7 +732,8 @@ int main(int argc, const char *argv[]) {
    * Xeon Phi.
    */
 #pragma offload target(mic) \
-  // inout(board: length(N*N) INOUT) 
+  in (meta_board: length(N*N*sizeof(board_t))) \
+  // inout(meta_board: length(N*N*sizeof(board_t)) INOUT) 
 #endif
   {
     //depth = # of turns taken (depth/2 = # game cycles)
@@ -729,7 +741,7 @@ int main(int argc, const char *argv[]) {
     int numTurns = 1;
 
     int nextIsTBD = false; //if next mini board is not yet decided because the calculated one is already completed
-    int depth = 2;
+    int depth = 4;
 
     //TODO start with random row and column 
     node_t root = node_t();
@@ -791,16 +803,17 @@ int main(int argc, const char *argv[]) {
         } else {
           nextIsTBD = false;
         }
+        numTurns++;
         if(isMetaWinner(meta_board, 'O')) {
           winner = 'O';
           printf("O Won! numTurns = %d\n", numTurns);
-          updateMetaCLI(meta_board);
+          updateMetaCLI(meta_board, false, NULL);
           break; 
         }
-        numTurns++;
+        
         if(numTurns == N*N*N*N) {
           printf("Tie! %d\n", numTurns);
-          updateMetaCLI(meta_board);
+          updateMetaCLI(meta_board, false, NULL);
           break;
         }
         root.row = res0.row;
@@ -825,26 +838,25 @@ int main(int argc, const char *argv[]) {
         nextIndex = root.row*N+root.col;
       }
       node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
-      //printf("X meta index = %d\n", res.metaIdx);
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
-      updateMetaCLI(meta_board);
+      updateMetaCLI(meta_board, false, NULL);
 
       if(mm != res.row*N+res.col) {
         nextIsTBD = true;
       } else {
         nextIsTBD = false;
       }
+      numTurns++;
       if(isMetaWinner(meta_board, 'X')) {
         winner = 'X';
         printf("X Won! numturns = %d\n", numTurns);
-        updateMetaCLI(meta_board);
+        updateMetaCLI(meta_board, false, NULL);
         break;
       }
 
-      numTurns++;
       if(numTurns == N*N*N*N) {
         printf("Tie! %d\n", numTurns);
-        updateMetaCLI(meta_board);
+        updateMetaCLI(meta_board, false, NULL);
         break;
       }
 
@@ -856,14 +868,15 @@ int main(int argc, const char *argv[]) {
   }
 
   //TODO write output to file
-  /*char output_filename[BUFSIZE];
+  char output_filename[BUFSIZE];
   sprintf(output_filename, "file_outputs/output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
   if (!output_file) {
     printf("Error: couldn't output costs file");
     return -1;
   }
-  for(int c = 0; c < N; c++) {
+  updateMetaCLI(meta_board, true, output_file);
+  /*for(int c = 0; c < N; c++) {
     fprintf(output_file, " -");
   }
   fprintf(output_file, "\n");
@@ -882,8 +895,8 @@ int main(int argc, const char *argv[]) {
       fprintf(output_file, " -");
     }
     fprintf(output_file, "\n");
-  }
-  fclose(output_file); */
+  }*/
+  fclose(output_file); 
 
   free(meta_board);
   return 0;
