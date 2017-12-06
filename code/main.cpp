@@ -61,6 +61,7 @@ void updateMetaCLI(board_t *meta_board) {
     printf(" -");
   }
   printf("\n");
+  int nonBlank = 0;
   for(int n = 0; n < N; n++) {
     //TODO show if the meta_board square is a win or tie 
     for(int r = 0; r < N; r++) {
@@ -71,6 +72,7 @@ void updateMetaCLI(board_t *meta_board) {
             printf(" |");
           } else {
             printf("%c|", temp);
+            nonBlank++;
           }
         }
       }
@@ -82,6 +84,7 @@ void updateMetaCLI(board_t *meta_board) {
     printf(" -");
   }
   printf("\n");
+  printf("num blank = %d\n", nonBlank);
   /*for(int r = 0; r < N; r++) {
     for(int c = 0; c < N; c++) {
       printf("r = %d, c = %d\n", r, c);
@@ -351,7 +354,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
-        result.metaIdx = metaIndex; 
+        result.metaIdx = ab.metaIdx; //metaIndex 
       }
       alpha = max(alpha, result.value);
       if(beta <= alpha) break;
@@ -383,7 +386,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         result.value = ab.value;
         result.row = ab.row;
         result.col = ab.col;
-        result.metaIdx = metaIndex;
+        result.metaIdx = ab.metaIdx;
       }
       beta = min(beta, result.value);
       if(beta <= alpha) break;
@@ -822,6 +825,7 @@ int main(int argc, const char *argv[]) {
         nextIndex = root.row*N+root.col;
       }
       node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
+      printf("X meta index = %d\n", res.metaIdx);
       int mm = makeMove(meta_board, res.metaIdx, res.row, res.col, 'X');
       updateMetaCLI(meta_board);
 
