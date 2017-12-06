@@ -861,7 +861,7 @@ int main(int argc, const char *argv[]) {
     int* scoreArr = (int *) malloc(2*sizeof(int));
     scoreArr[0] = 0;
     scoreArr[1] = 0; 
-    int* val = calculateSmallBoardScore(meta_board[0].board, 1, 1, 'O', 'X', scoreArr)[0];
+    int* val = calculateSmallBoardScore(meta_board[0].board, 1, 1, 'O', 'X', scoreArr);
     root.value = val[0] - val[1]; 
     free(scoreArr);
     free(val);
