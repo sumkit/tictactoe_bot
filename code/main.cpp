@@ -464,11 +464,12 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
           botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
         free(scoreArr);
         node_t temp = node_t();
-        temp.value = val[0];
+        temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
         temp.row = i;
         temp.col = j;
         children[childIndex] = temp;
         childIndex++;
+        free(val);
       }
     }
   }
@@ -577,11 +578,12 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
           botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
         free(scoreArr);
         node_t temp = node_t();
-        temp.value = val[0];
+        temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
         temp.row = i;
         temp.col = j;
         children[childIndex] = temp;
         childIndex++;
+        free(val);
       }
     }
   }
@@ -857,10 +859,12 @@ int main(int argc, const char *argv[]) {
     root.col = 1;
     // root.value = calculateValue(board, 1,1, false);
     int* scoreArr = (int *) malloc(2*sizeof(int));
-    scoreArr[0] = INT_MIN;
-    scoreArr[1] = INT_MAX; 
-    root.value = calculateSmallBoardScore(meta_board[0].board, 1, 1, 'O', 'X', scoreArr)[0];
+    scoreArr[0] = 0;
+    scoreArr[1] = 0; 
+    int* val = calculateSmallBoardScore(meta_board[0].board, 1, 1, 'O', 'X', scoreArr)[0];
+    root.value = val[0] - val[1]; 
     free(scoreArr);
+    free(val);
     makeMove(meta_board, 0, root.row, root.col, 'O');
     updateMetaCLI(meta_board);
     bool firstMove = true;
