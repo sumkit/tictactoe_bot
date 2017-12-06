@@ -97,7 +97,7 @@ void updateMetaCLI(board_t *meta_board) {
  * make sure AI blocks when player is about to win 
  * https://en.wikipedia.org/wiki/Tic-tac-toe 
  */
-int calculateSmallBoardScore(char *board, char bot, char player) { 
+/*int calculateSmallBoardScore(char *board, char bot, char player) { 
   int center = 1 * N + 1; 
   int score = 0; 
   if (board[center] == bot) 
@@ -150,6 +150,106 @@ int calculateSmallBoardScore(char *board, char bot, char player) {
   if (diagScoreTwo >= 2 || diagScoreTwo <= -2) 
       score += diagScoreTwo; 
   return score; 
+
+}*/
+
+int* calculateSmallBoardScore (char* board, int row, int col, 
+  char player, char opp, int* oldScore) {
+
+  int center = 1 * N + 1; 
+  int* res = (int *) calloc(2, sizeof(int)); 
+  
+  int oldPlayerScore;
+  int oldOppScore; 
+  if (player == 'O') { 
+    oldPlayerScore = oldScore[0];
+    oldOppScore = oldScore[1];
+  } else {
+    oldPlayerScore = oldScore[1];
+    oldOppScore = oldScore[0]; 
+  }
+
+  int myScore = oldPlayerScore; 
+  int hisScore = oldOppScore; 
+
+  //add 3 for the center of any board
+  if (row * N + col == center) {
+    myScore += 3;
+  }
+
+  int opWon = 0;  
+  int iWon = 1; 
+  int fail = 0;
+
+  //add 2 for getting a sequence of two tiles
+  //subtract 2 from the opponent for blocking their sequence of two tiles
+
+  bool diagOne = ((row*N+col) % 4 == 0); 
+  bool diagTwo = (((row*N+col) % 2 == 0) && ((row*N+col) > 0) && ((row*N+col) < N*N-1)); 
+
+
+  for (int i = N*row; i < (N * (row + 1)); i++) { 
+    if (i == row*N + col) 
+      continue; 
+    if (board[i] == opp) opWon += 1; 
+    if (board[i] == player) iWon += 1; 
+  }
+
+  if (iWon == 2 && opWon == 0) myScore += 2; 
+  if (opWon == 2) hisScore -= 2; 
+
+  opWon = 0;  
+  iWon = 1; 
+  for (int i = col; i < N*N; i += N) {
+    if (i == row*N + col) 
+      continue; 
+    if (board[i] == opp) opWon += 1; 
+    if (board[i] == player) iWon += 1;
+  }
+
+  if (iWon == 2 && opWon == 0) myScore += 2; 
+  if (opWon == 2) hisScore -= 2; 
+
+  if (diagOne) { 
+    opWon = 0;  
+    iWon = 1; 
+    for (int i = 0; i < N*N; i += 4) {
+      if (i == row*N+col) 
+        continue; 
+      if (board[i] == opp) opWon += 1; 
+      if (board[i] == player) iWon += 1;
+    }
+    if (iWon == 2 && opWon == 0) myScore += 2; 
+    if (opWon == 2) hisScore -= 2; 
+  }
+
+  if (diagTwo) { 
+    opWon = 0;  
+    iWon = 1; 
+    for (int i = 2; i < N*N-1; i += 2) {
+      if (i == row*N+col) 
+        continue; 
+      if (board[i] == opp) opWon += 1; 
+      if (board[i] == player) iWon += 1;
+    }
+    if (iWon == 2 && opWon == 0) myScore += 2; 
+    if (opWon == 2) hisScore -= 2; 
+  }
+
+
+  if (isWinner(row, col, board, player, 0, false)) 
+    //add 5 for any small board win
+    myScore += 5;
+
+  if (player == 'O') { 
+    res[0] = myScore;
+    res[1] = hisScore; 
+  } else {
+    res[0] = hisScore;
+    res[1] = myScore;
+  }
+
+  return res;
 
 }
 
@@ -480,8 +580,7 @@ bool isMetaWinner(board_t* meta, char player) {
   return false;
 }
 
-int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, 
-  char player, char opp, int* oldScore) {
+int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, char player, char opp, int* oldScore) {
   int center = 1 * N + 1; 
   int* res = (int *) calloc(2, sizeof(int)); 
   
@@ -507,70 +606,9 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
   if (small_idx == center) {
     myScore += 3; 
   }
-
-  //add 3 for the center of any board
-  if (row * N + col == center) {
-    myScore += 3;
-  }
-
   int opWon = 0;  
   int iWon = 1; 
   int fail = 0;
-
-  //add 2 for getting a sequence of two tiles
-  //subtract 2 from the opponent for blocking their sequence of two tiles
-
-  char* board = meta_board[small_idx].board; 
-  bool diagOne = ((row*N+col) % 4 == 0); 
-  bool diagTwo = (((row*N+col) % 2 == 0) && ((row*N+col) > 0) && ((row*N+col) < N*N-1)); 
-
-  for (int i = N*row; i < (N * (row + 1)); i++) { 
-    if (i == row*N + col) 
-      continue; 
-    if (board[i] == opp) opWon += 1; 
-    if (board[i] == player) iWon += 1; 
-  }
-
-  if (iWon == 2 && opWon == 0) myScore += 2; 
-  if (opWon == 2) hisScore -= 2; 
-
-  opWon = 0;  
-  iWon = 1; 
-  for (int i = col; i < N*N; i += N) {
-    if (i == row*N + col) 
-      continue; 
-    if (board[i] == opp) opWon += 1; 
-    if (board[i] == player) iWon += 1;
-  }
-
-  if (iWon == 2 && opWon == 0) myScore += 2; 
-  if (opWon == 2) hisScore -= 2; 
-
-  if (diagOne) { 
-    opWon = 0;  
-    iWon = 1; 
-    for (int i = 0; i < N*N; i += 4) {
-      if (i == row*N+col) 
-        continue; 
-      if (board[i] == opp) opWon += 1; 
-      if (board[i] == player) iWon += 1;
-    }
-    if (iWon == 2 && opWon == 0) myScore += 2; 
-    if (opWon == 2) hisScore -= 2; 
-  }
-
-  if (diagTwo) { 
-    opWon = 0;  
-    iWon = 1; 
-    for (int i = 2; i < N*N-1; i += 2) {
-      if (i == row*N+col) 
-        continue; 
-      if (board[i] == opp) opWon += 1; 
-      if (board[i] == player) iWon += 1;
-    }
-    if (iWon == 2 && opWon == 0) myScore += 2; 
-    if (opWon == 2) hisScore -= 2; 
-  }
 
   if (isWinner(row, col, board, player, 0, false)) {
 
@@ -745,6 +783,8 @@ int main(int argc, const char *argv[]) {
         }
         node_t res0 = alphabeta(&root, 1, INT_MIN, INT_MAX, true, meta_board[nextIndex0].board, num_of_threads, 
           meta_board, nextIndex0);
+        if (meta_board[nextIndex0].board[res0.row*N+res0.col] != 0)
+          printf("%c", meta_board[nextIndex0].board[res0.row*N+res0.col]);
         int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
         // printf("meta = %d, row = %d, col = %d\n", nextIndex0, res0.row, res0.col);
         // updateMetaCLI(meta_board);
@@ -793,6 +833,9 @@ int main(int argc, const char *argv[]) {
       }
       node_t res = alphabeta(&root, 1, INT_MIN, INT_MAX, false, meta_board[nextIndex].board, num_of_threads,
         meta_board, nextIndex);
+
+      if (meta_board[nextIndex].board[res.row*N+res.col] != 0)
+          printf("%c", meta_board[nextIndex].board[res.row*N+res.col]);
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
       // printf("meta = %d, row = %d, col = %d\n", nextIndex, res.row, res.col);
       // updateMetaCLI(meta_board);
