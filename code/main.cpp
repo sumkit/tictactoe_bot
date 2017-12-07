@@ -308,41 +308,92 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     return node;
   }
   //generate tree
-  node_t *children = (node_t *) malloc(numChildren * sizeof(node_t));
-  int childIndex = 0;
+  // node_t *children = (node_t *) malloc(numChildren * sizeof(node_t));
+  // int childIndex = 0;
 
-  for(int i = 0; i < N; i++) {
-    for(int j = 0; j < N; j++) {
+  node_t result = node_t();
+  int i;
+  #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+  for(i = 0; i < N; i++) {
+    int j;
+    #pragma omp parallel for default(shared) private(j) num_threads(num_of_threads)
+    for(j = 0; j < N; j++) {
       int index = i*N + j;
       // if((int)meta_board[nextIndex].board[index] == 0) {
       if((int)meta_board[metaIndex].board[index] == 0) {
         int* scoreArr = (int *) malloc(2*sizeof(int));
+        // printf("scoreArr addr 0 = %p\n", scoreArr);
         scoreArr[0] = alpha;
         scoreArr[1] = beta; 
         // int* val = calculateSmallBoardScore(meta_board[nextIndex].board, i, j, 
         //   botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
         int* val = calculateSmallBoardScore(meta_board[metaIndex].board, i, j, 
           botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+        // printf("scoreArr addr 1 = %p\n", scoreArr);
         free(scoreArr);
         node_t temp = node_t();
         temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
         temp.row = i;
         temp.col = j;
         temp.metaIdx = metaIndex; 
-        children[childIndex] = temp;
-        childIndex++;
         free(val);
+        // children[childIndex] = temp;
+        // childIndex++;
+        // printf("val addr = %p\n", val);
+        if(botMaximizing) {
+          result.value = INT_MIN;
+          meta_board[metaIndex].board[i*N+j] = 'O';
+          node_t ab = node_t();
+          if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
+            ab.value = INT_MAX;
+            ab.row = i;
+            ab.col = j;
+            ab.metaIdx = metaIndex; 
+          } else {
+            ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+              meta_board, i*N+j);
+          }
+          meta_board[metaIndex].board[i*N+j] = 0; 
+          if(ab.value > result.value) {
+            result.value = ab.value;
+            result.row = i;
+            result.col = j;
+            result.metaIdx = ab.metaIdx; //metaIndex 
+          }
+          alpha = max(alpha, result.value);
+        } else {
+          result.value = INT_MAX;
+          meta_board[metaIndex].board[i*N+j] = 'X';
+          node_t ab = node_t();
+          if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
+            ab.value = INT_MIN;
+            ab.row = i;
+            ab.col = j;
+            ab.metaIdx = metaIndex;
+          } 
+          else {
+            ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+              meta_board, i*N+j);
+          }
+          meta_board[metaIndex].board[i*N+j] = 0;
+          if(ab.value < result.value) {
+            result.value = ab.value;
+            result.row = i;
+            result.col = j;
+            result.metaIdx = ab.metaIdx;
+          }
+          beta = min(beta, result.value);
+        }
       }
     }
   }
 
-  node_t result = node_t();
-  result.row = children[0].row;
+  /*result.row = children[0].row;
   result.col = children[0].col;
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'O';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'O';
@@ -370,11 +421,14 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
       alpha = max(alpha, result.value);
       // if(beta <= alpha) break;
     }
+    // printf("children addr = %p\n", children);
+    // #pragma omp barrier
+    // free(children);
   }
   else {
     result.value = INT_MAX;
     int i;
-    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'X';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'X';
@@ -402,8 +456,10 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
       beta = min(beta, result.value);
       // if(beta <= alpha) break;
     }
-  }
-  free(children);
+    // printf("children addr = %p\n", children);
+    // #pragma omp barrier
+    // free(children);
+  }*/
   return result;
 }
 
@@ -490,6 +546,8 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
       }
       alpha = max(alpha, result.value);
     }
+    // #pragma omp barrier 
+    // free(children);
   }
   else {
     result.value = INT_MAX;
@@ -505,8 +563,9 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
       }
       beta = min(beta, result.value);
     }
+    // #pragma omp barrier 
+    // free(children);
   }
-  free(children);
   return result;
 }
 
@@ -711,10 +770,6 @@ int main(int argc, const char *argv[]) {
   _argc = argc - 1;
   _argv = argv + 1;
 
-
-
-  printf("outside loop pls work 1\n");
-
   // 3x3 meta board with pointers to 9 constituent local boards 
   // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
   board_t* meta_board = (board_t*) calloc(N*N, sizeof(board_t)); 
@@ -725,18 +780,10 @@ int main(int argc, const char *argv[]) {
     meta_board[i].numFilled = 0; 
   }
 
-
-
-  printf("outside loop pls work 2\n");
-
   //TODO: take this out 
   // char* board = meta_board[0].board; 
 
   int num_of_threads = get_option_int("-n", 1);
-
-
-
-  printf("outside loop pls work 3\n");
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
   {
@@ -753,7 +800,6 @@ int main(int argc, const char *argv[]) {
   } 
 #endif
   {
-    printf("outside loop pls work 4\n");
     char winner;
     int numTurns = 1;
 
@@ -775,10 +821,7 @@ int main(int argc, const char *argv[]) {
     free(scoreArr);
     free(val);
     makeMove(meta_board, 0, root.row, root.col, 'O');
-    // updateMetaCLI(meta_board);
     bool firstMove = true;
-
-    printf("outside loop pls work 5\n");
 
     while(1) {
       //let user go first. wait for input.
@@ -816,7 +859,6 @@ int main(int argc, const char *argv[]) {
         
         node_t res0 = alphabeta(root, depth, INT_MIN, INT_MAX, true, num_of_threads, meta_board, nextIndex0);
         int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
-        // updateMetaCLI(meta_board);
 
         if(mm0 != res0.row*N+res0.col ) {
           nextIsTBD = true;
@@ -859,7 +901,6 @@ int main(int argc, const char *argv[]) {
       }
       node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
-      updateMetaCLI(meta_board, false, NULL);
 
       if(mm != res.row*N+res.col) {
         nextIsTBD = true;
@@ -897,7 +938,6 @@ int main(int argc, const char *argv[]) {
     printf("Error: couldn't output costs file");
     return -1;
   }
-  updateMetaCLI(meta_board, true, output_file);
   /*for(int c = 0; c < N; c++) {
     fprintf(output_file, " -");
   }
