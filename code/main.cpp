@@ -713,7 +713,7 @@ int main(int argc, const char *argv[]) {
 
 
 
-  printf("outside loop pls work 1");
+  printf("outside loop pls work 1\n");
 
   // 3x3 meta board with pointers to 9 constituent local boards 
   // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
@@ -727,7 +727,7 @@ int main(int argc, const char *argv[]) {
 
 
 
-  printf("outside loop pls work 2");
+  printf("outside loop pls work 2\n");
 
   //TODO: take this out 
   // char* board = meta_board[0].board; 
@@ -736,24 +736,29 @@ int main(int argc, const char *argv[]) {
 
 
 
-  printf("outside loop pls work 3");
+  printf("outside loop pls work 3\n");
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
+  {
+    printf("in ifdef\n");
+  }
 
   /* This pragma means we want the code in the following block be executed in 
    * Xeon Phi.
    */
-#pragma offload target(mic) inout(meta_board: length(N*N)) 
+#pragma offload target(mic) \
+  in(meta_board: length(N*N))
+  {
+    printf("in pragma\n");
+  } 
 #endif
   {
-    //depth = # of turns taken (depth/2 = # game cycles)
-
-
-    printf("outside loop pls work 4");
+    printf("outside loop pls work 4\n");
     char winner;
     int numTurns = 1;
 
     int nextIsTBD = false; //if next mini board is not yet decided because the calculated one is already completed
+    //depth = # of turns taken (depth/2 = # game cycles)
     int depth = 4;
 
     //TODO start with random row and column 
@@ -773,7 +778,7 @@ int main(int argc, const char *argv[]) {
     // updateMetaCLI(meta_board);
     bool firstMove = true;
 
-    printf("outside loop pls work 5");
+    printf("outside loop pls work 5\n");
 
     while(1) {
       //let user go first. wait for input.
