@@ -342,7 +342,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'O';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'O';
@@ -374,7 +374,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   else {
     result.value = INT_MAX;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       // meta_board[nextIndex].board[children[i].row*N+children[i].col] = 'X';
       meta_board[metaIndex].board[children[i].row*N+children[i].col] = 'X';
@@ -479,7 +479,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
   if(botMaximizing) {
     result.value = INT_MIN;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, false, board, num_of_threads);
       if(ab.value > result.value) {
@@ -494,7 +494,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
   else {
     result.value = INT_MAX;
     int i;
-    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    //#pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
     for(i = 0; i < numChildren; i++) {
       node_t ab = metaAlphabeta(&(children[i]), depth-1, alpha, beta, true, board, num_of_threads);
       if(ab.value < result.value) {
@@ -711,6 +711,10 @@ int main(int argc, const char *argv[]) {
   _argc = argc - 1;
   _argv = argv + 1;
 
+
+
+  printf("outside loop pls work 1");
+
   // 3x3 meta board with pointers to 9 constituent local boards 
   // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
   board_t* meta_board = (board_t*) calloc(N*N, sizeof(board_t)); 
@@ -721,10 +725,18 @@ int main(int argc, const char *argv[]) {
     meta_board[i].numFilled = 0; 
   }
 
+
+
+  printf("outside loop pls work 2");
+
   //TODO: take this out 
   // char* board = meta_board[0].board; 
 
   int num_of_threads = get_option_int("-n", 1);
+
+
+
+  printf("outside loop pls work 3");
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
 
@@ -732,11 +744,13 @@ int main(int argc, const char *argv[]) {
    * Xeon Phi.
    */
 #pragma offload target(mic) \
-  in (meta_board: length(N*N*sizeof(board_t))) \
-  // inout(meta_board: length(N*N*sizeof(board_t)) INOUT) 
+  inout(meta_board: length(N*N) INOUT) 
 #endif
   {
     //depth = # of turns taken (depth/2 = # game cycles)
+
+
+    printf("outside loop pls work 4");
     char winner;
     int numTurns = 1;
 
@@ -759,6 +773,8 @@ int main(int argc, const char *argv[]) {
     makeMove(meta_board, 0, root.row, root.col, 'O');
     // updateMetaCLI(meta_board);
     bool firstMove = true;
+
+    printf("outside loop pls work 5");
 
     while(1) {
       //let user go first. wait for input.
@@ -868,6 +884,8 @@ int main(int argc, const char *argv[]) {
   }
 
   //TODO write output to file
+
+  //const char *filename = basename("file_outputs/");
   char output_filename[BUFSIZE];
   sprintf(output_filename, "file_outputs/output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
