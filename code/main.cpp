@@ -743,8 +743,7 @@ int main(int argc, const char *argv[]) {
   /* This pragma means we want the code in the following block be executed in 
    * Xeon Phi.
    */
-#pragma offload target(mic) \
-  inout(meta_board: length(N*N) INOUT) 
+#pragma offload target(mic) inout(meta_board: length(N*N)) 
 #endif
   {
     //depth = # of turns taken (depth/2 = # game cycles)
