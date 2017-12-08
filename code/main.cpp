@@ -294,17 +294,21 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
 
   // int nextIndex = (node.row * N) + node.col;
   int numChildren = 0;
+  int firstChildRow, firstChildCol;
   for(int r = 0; r < N; r++) {
     for(int c = 0; c < N; c++) {
       // if((int)meta_board[nextIndex].board[r*N+c] == 0) {
       if((int)meta_board[metaIndex].board[r*N+c] == 0) {
+        if(numChildren == 0) {
+          firstChildRow = r;
+          firstChildCol = c;
+        }
         numChildren++;
       }
     }
-  }
+  } 
   
   if(depth == 0 || numChildren == 0) {
-    // printf("row = %d, col = %d -- ", node.row, node.col);
     return node;
   }
   //generate tree
@@ -312,6 +316,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   // int childIndex = 0;
 
   node_t result = node_t();
+  result.row = firstChildRow;
+  result.col = firstChildCol;
   int i;
   #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
   for(i = 0; i < N; i++) {
@@ -319,7 +325,6 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     #pragma omp parallel for default(shared) private(j) num_threads(num_of_threads)
     for(j = 0; j < N; j++) {
       int index = i*N + j;
-      // if((int)meta_board[nextIndex].board[index] == 0) {
       if((int)meta_board[metaIndex].board[index] == 0) {
         int* scoreArr = (int *) malloc(2*sizeof(int));
         // printf("scoreArr addr 0 = %p\n", scoreArr);
@@ -342,7 +347,7 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
         // printf("val addr = %p\n", val);
         if(botMaximizing) {
           result.value = INT_MIN;
-          meta_board[metaIndex].board[i*N+j] = 'O';
+          meta_board[metaIndex].board[index] = 'O';
           node_t ab = node_t();
           if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
             ab.value = INT_MAX;
@@ -351,19 +356,19 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
             ab.metaIdx = metaIndex; 
           } else {
             ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
-              meta_board, i*N+j);
+              meta_board, index);
           }
-          meta_board[metaIndex].board[i*N+j] = 0; 
+          meta_board[metaIndex].board[index] = 0; 
           if(ab.value > result.value) {
             result.value = ab.value;
             result.row = i;
             result.col = j;
-            result.metaIdx = ab.metaIdx; //metaIndex 
+            result.metaIdx = ab.metaIdx;  
           }
           alpha = max(alpha, result.value);
         } else {
           result.value = INT_MAX;
-          meta_board[metaIndex].board[i*N+j] = 'X';
+          meta_board[metaIndex].board[index] = 'X';
           node_t ab = node_t();
           if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
             ab.value = INT_MIN;
@@ -373,9 +378,9 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
           } 
           else {
             ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
-              meta_board, i*N+j);
+              meta_board, index);
           }
-          meta_board[metaIndex].board[i*N+j] = 0;
+          meta_board[metaIndex].board[index] = 0;
           if(ab.value < result.value) {
             result.value = ab.value;
             result.row = i;
@@ -541,7 +546,7 @@ node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMa
       if(ab.value > result.value) {
         result.value = ab.value;
         result.row = children[i].row;
-        result.col = children[i].row;
+        result.col = children[i].col;
         result.metaIdx = ab.row*N+ab.col;
       }
       alpha = max(alpha, result.value);
@@ -881,6 +886,7 @@ int main(int argc, const char *argv[]) {
         root.row = res0.row;
         root.col = res0.col;
         root.value = res0.value;
+        root.metaIdx = res0.metaIdx;
       }
       
       int nextIndex;
@@ -924,6 +930,7 @@ int main(int argc, const char *argv[]) {
       root.row = res.row;
       root.col = res.col;
       root.value = res.value;
+      root.metaIdx = res.metaIdx;
       if(firstMove) firstMove = false;
     }
   }
