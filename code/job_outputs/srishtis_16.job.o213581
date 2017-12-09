@@ -1,0 +1,46 @@
+in pragma
+in ifdef
+Tie! 281
+META: 
+X|O|X|X|X|
+O|O|X|X|O|
+X|X|O|O|X|
+O||X|X|O|
+X|X|O|X|O|
+
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+X| | | | |O|X| | | |X| | | | |X|O| |O| |X| | | | |
+X|O| | | |O| | | | |X| | | | |X| | | | |X| | | | |
+X| | | | |O| | | | |X|X| | | |X| |O| | |X| |O|O| |
+X|O| | | |O| | | | |X| | | | |X| | | | |X|X| |O| |
+X| | | | |O| | | | |X|O| | | |X| | | | |X|O| | |O|
+O|X|O|O|O|O| |O|X| |X|O| | | |X|O| | | | |O| | | |
+X|X|O|O|O|O|O|O|X|X|X| | | | |X| | |O| |X|O| | | |
+X| |O|X| |X| |O|X| |X| |O| | |X| |O|O| | |O|O|O| |
+ |X|O| | | |X|O| | |X|X|X| | |X|O| |O|O|X|O| | | |
+O|X|O| | |X| |O|X|X|X| |O| | |X| |O|O| | |O| | | |
+X|X|O| |O| |X| | | | |O| | | |X|X|O| |X| |X| | | |
+X|X| | | |O|X| | | |X|O| | | |O|O|O| |X| |X| | | |
+O|X| | | |O|X| | | |X|O|X| | |O|X|O|O| |O|X| | | |
+ |X| | | |O|X| | | |O|O| | | |O|X|O|X|X|O|X| | | |
+X|X|O|O| |O|X| | | | |O| | |O|X|X|O| |X|X|X|O| |O|
+O|X| | | |O|O|O|X|X|X| | | | | | | |X| |O| |X| |X|
+O|X| | | |O|O|X|O|X|X| | | | |O| | |X| |O|O|X|X|X|
+O| | | | |O|O|O|X|O|X| | | | |O| | |X| |O| |X| | |
+O|X| | | |O|X|X|O|O|X|O|O| | | |X| |X| |O|X| |X| |
+O| | | | |X|O|O|O|X|X| |O| | |O| | |X| |O| | | | |
+O| | | |X| |X| | | | |O| | | |X|O| | | |O|X| | | |
+O|O| | |X|O|X|O| | |X|O| | | |X|O| | | |O|X| | | |
+O| | | |X|O|X| | | |X|O| | | |X| | | | |O| | | | |
+ |O| | |X|O|X| | | |X|O| | | |X|O| | | |O| | | | |
+X| | | |X| |X| | | | |O| | | |X|O|O| | |O|X| | |X|
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+Error: couldn't output costs file
+ Performance counter stats for './main -n 16':
+
+          96899495      cache-misses                                                
+
+       8.843165240 seconds time elapsed
+
+mv: cannot stat `/home/srishtis/costs_*': No such file or directory
+mv: cannot stat `/home/srishtis/output_*': No such file or directory
