@@ -59,15 +59,13 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
     if(file) fprintf(output_file, "\n");
     else printf("\n");
   }
-  printf("\n");
   
   for(int c = 0; c < N*N; c++) {
     if(file) fprintf(output_file, " -");
     else printf(" -");
   }
   if(file) fprintf(output_file, "\n");
-  else printf(" -");
-  int nonBlank = 0;
+  else printf("\n");
   for(int n = 0; n < N; n++) {
     //TODO show if the meta_board square is a win or tie 
     for(int r = 0; r < N; r++) {
@@ -80,7 +78,6 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
           } else {
             if(file) fprintf(output_file, "%c|", temp);
             else printf("%c|", temp);
-            nonBlank++;
           }
         }
       }
@@ -96,13 +93,6 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
   }
   if(file) fprintf(output_file, "\n");
   else printf("\n");
-  /*for(int r = 0; r < N; r++) {
-    for(int c = 0; c < N; c++) {
-      printf("r = %d, c = %d\n", r, c);
-      updateCLI(meta_board[r*N+c].board);
-      printf("\n");
-    }
-  } */
 }
 
 //for mini board
@@ -689,50 +679,52 @@ int* updatePlayerHeuristic(board_t* meta_board, char* small_board, int small_idx
   return res;
 }
 
-node_t metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) { 
+int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) { 
   node_t res =  node_t(); 
-  int maxScore = 0; 
-  char* board; 
+  res.value = botMaximizing ? INT_MIN : INT_MAX; 
+
   int* init = (int*) calloc(2, sizeof(int));
   init[0] = 0;
   init[1] = 0;
+
   char player = botMaximizing ? 'O' : 'X'; 
   char opp = botMaximizing ? 'X' : 'O'; 
+
   for (int metaIdx = 0; metaIdx < N*N; metaIdx++) { 
-    board = meta_board[metaIdx].board; 
     char status = meta_board[metaIdx].status;
     if ((int) status == 0) { 
-      node_t temp = node_t(); 
-      temp = alphabeta(temp, 2, INT_MAX, INT_MIN, botMaximizing, 
+      node_t temp = alphabeta(temp, 2, INT_MAX, INT_MIN, botMaximizing, 
         num_of_threads, meta_board, metaIdx);  
+      meta_board[metaIdx].board[temp.row*N + temp.col] = player; 
+      int* curVal = updatePlayerHeuristic(meta_board, meta_board[metaIdx].board, metaIdx, player, opp, init);
+      meta_board[metaIdx].board[temp.row*N + temp.col] = 0; 
 
-      char* boardcpy = (char *) calloc(N*N, sizeof(char)); 
-      memcpy(board, boardcpy, N*N); 
-      boardcpy[temp.row*N + temp.col] = player; 
-
-      int* curVal = updatePlayerHeuristic(meta_board, boardcpy, metaIdx, player, opp, init);
       int curScore;
       int updatedScore; 
-
-      if (botMaximizing)
+      if (botMaximizing) {
         curScore = curVal[0] - curVal[1];
-      else
-        curScore = curVal[1] - curVal[0];  
-      
-      int resScore = temp.value + curScore; 
-      if (resScore > maxScore) { 
-        maxScore = resScore; 
-        res.value = resScore; 
-        res.row = temp.row; 
-        res.col = temp.col; 
-        res.metaIdx = metaIdx; 
+        int resScore = temp.value + curScore; 
+        if (resScore > res.value) { 
+          res.value = resScore; 
+          res.row = temp.row; 
+          res.col = temp.col; 
+          res.metaIdx = metaIdx; 
+        }
       }
-    free(curVal); 
-    free(boardcpy); 
+      else {
+        int resScore = temp.value - curScore; 
+        curScore = curVal[1] - curVal[0];  
+        if (resScore < res.value) { 
+          res.value = resScore; 
+          res.row = temp.row; 
+          res.col = temp.col; 
+          res.metaIdx = metaIdx; 
+        }
+      }
+      free(curVal); 
     }
   }
-  return res; 
-
+  return res.metaIdx; 
 }
 
 int main(int argc, const char *argv[]) {
@@ -804,11 +796,10 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t meta = metaMove(meta_board, true, num_of_threads); 
-          nextIndex0 = makeMove(meta_board, meta.metaIdx, meta.row, meta.col, 'O'); 
-          //node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
+          nextIndex0 = metaMove(meta_board, true, num_of_threads); 
+          // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
           free(tempBoard);
-          //nextIndex0 = metaRes.row*N+metaRes.col;
+          // nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
@@ -850,11 +841,10 @@ int main(int argc, const char *argv[]) {
           }
         }
 
-        node_t meta = metaMove(meta_board, false, num_of_threads); 
-        nextIndex = makeMove(meta_board, meta.metaIdx, meta.row, meta.col, 'X'); 
-        //node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
+        nextIndex = metaMove(meta_board, false, num_of_threads); 
+        // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
         free(tempBoard);
-        //nextIndex = metaRes.row * N + metaRes.col;
+        // nextIndex = metaRes.row * N + metaRes.col;
       }
       else {
         nextIndex = root.row*N+root.col;
@@ -889,9 +879,6 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  //TODO write output to file
-
-  //const char *filename = basename("file_outputs/");
   char output_filename[BUFSIZE];
   sprintf(output_filename, "file_outputs/output_%d.txt", num_of_threads);
   FILE *output_file = fopen(output_filename, "w");
@@ -899,26 +886,7 @@ int main(int argc, const char *argv[]) {
     printf("Error: couldn't output costs file");
     return -1;
   }
-  /*for(int c = 0; c < N; c++) {
-    fprintf(output_file, " -");
-  }
-  fprintf(output_file, "\n");
-  for(int r = 0; r < N; r++) {
-    fprintf(output_file, "|");
-    for(int c = 0; c < N; c++) {
-      char temp = board[r*N+c];
-      if(temp == 0) {
-        fprintf(output_file, " |");
-      } else {
-        fprintf(output_file, "%c|", temp);
-      }
-    }
-    fprintf(output_file, "\n");
-    for(int c = 0; c < N; c++) {
-      fprintf(output_file, " -");
-    }
-    fprintf(output_file, "\n");
-  }*/
+
   fclose(output_file); 
 
   free(meta_board);
