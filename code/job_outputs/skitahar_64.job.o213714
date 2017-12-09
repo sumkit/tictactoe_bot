@@ -1,0 +1,46 @@
+in pragma
+in ifdef
+Tie! 524
+META: 
+O|O|1 |O|O|
+X|X|1 |1 |1 |
+X|O|1 |O|1 |
+X|X|X|O|O|
+X|O|O|X|O|
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+X|X|X|O|X|X|O|O|O|O|O|O|O|O|X| | |X|O|O|O|O|X|X|X|
+O|O|O|O|O| |O|X|X|X|O|X|X|O|X| | | |O|X|O|X|O|X|X|
+X| |O|X|X|X|O|O|X|X|O|X|X|O|O| | | |O|X|O|O|X|O|O|
+X|O|X|O|O|O|O|X|O|O|X|O|X|O|X| | | |O|O|O|O|O|X|O|
+X|O|X| |O|O|O| |X|X|O|X|O|X|O| | |O|O|X|O|X|O|O|X|
+ |X|X|O| | |X|X|O|X|O|O|X|X|X|X|O|X|O|O|O|O|X|O|O|
+ |X|X|X|X| |X|X|X|X|X|X|O|O|X|X|O|X|X|X|X|O|X|O|X|
+ |X|X| |O| |X|X| |O|O|X|O|X|O|O|O|O|X|X|O|X|X|O|X|
+ | |X|X| | |X|X|O|O|X|O|X|X|X|X|O|X|X|O|X|O|O|O|O|
+X|X|X| |X| |X| |X|X|X|X|O|O|O|X|X|O|X|O|O|O|O|X|X|
+X|X| |O|X|O|X|O|O|X|X|X|O|O|O| |O|O|X|X|O|X|O|O|O|
+ |X| | | | | | |O|X|X|X|X|X|O| |O|O|O|O|X|O|X|X|O|
+X| |X|X|X| |O|O|X|O|O|X|X|X|O| |O|O|O|X|O|X|X|O|O|
+ |X|X|X|O|O| |X|X|O|O|O|X|O|X| |O|X|O|X|O|O|X|X|X|
+ | | | |X|O|O|O|O|O|O|O|X|O|O| |O|X|O|O|O|O|X|X|O|
+X|X|O|X|X|O|X|X|X|X| | | | |X| | |O|X|O| | |O|X|X|
+O|X|X|X|X|O|X|X|X|X| | | |O|X| | |O|O|O| | |O|X|O|
+X|X| |O|O|O| |X| |O| | | | |X| | |O|X|X| | |O|X|X|
+X|X|X|O|O|X|O|X|O|O| | | |O|X| |X|O|X|X| | |O|O|O|
+O|X| | |O|O|X|X|X|X| | | |X|X| | |O|X|O| | |O|O|X|
+X|X|X|O|X|O|O|X|O|O|O|X|X|O|X| |O|O|O|O| |O|O|X|O|
+X|X|X|X|O| |X|O|O|O|O|O|O|O|O|X|O|O|O|X|O|O|O|X|O|
+X|X|O|X|X|X|X|O|X|X|X|O|X|X|O|O|O|O|X|O|O|X|X|X|X|
+X|X|X|O|O|O|O|X|O|O|X|O|X|X|X|O|O|O|X|X|O|O|O|O|O|
+ |X|X| |O|O|O| |O|O|O|X|O|O|X|X|X|X|X|X|O|X|X|X|O|
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+Spots on board taken up: 524
+Error: couldn't output costs file
+ Performance counter stats for './main -n 64':
+
+           1240271      cache-misses                                                
+
+       6.147144018 seconds time elapsed
+
+mv: cannot stat `/home/skitahar/costs_*': No such file or directory
+mv: cannot stat `/home/skitahar/output_*': No such file or directory

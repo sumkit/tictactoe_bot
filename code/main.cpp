@@ -49,10 +49,14 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
   for(int i = 0; i < N; i++) {
     for(int j = 0; j < N; j++) {
       char temp = meta_board[i*N+j].status;
-      if(temp == 0) {
+      if((int) temp == 0) {
         if(file) fprintf(output_file, " |");
         else printf(" |");
-      } else {
+      } else if ((int) temp == 1) {
+        if(file) fprintf(output_file, "1 |");
+        else printf("1 |");
+      } 
+      else {
         if(file) fprintf(output_file, "%c|", temp);
         else printf("%c|", temp);
       }
@@ -261,8 +265,8 @@ bool boardComplete(char* local_board) {
 int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
   int next_board_idx = row*N+col; 
   if((int) (meta_board[local_board_idx].board[next_board_idx]) != 0) {
-    printf("dumb nuts local = %d r = %d, c = %d, before = %d, new = %d\n", local_board_idx, row, col, 
-      (int) (meta_board[local_board_idx].board[next_board_idx]), (int) player);
+    // printf("dumb nuts local = %d r = %d, c = %d, before = %d, new = %d\n", local_board_idx, row, col, 
+    //   (int) (meta_board[local_board_idx].board[next_board_idx]), (int) player);
   } 
   meta_board[local_board_idx].board[next_board_idx] = player; 
   meta_board[local_board_idx].numFilled++;
@@ -581,7 +585,7 @@ int* updatePlayerHeuristic(board_t* meta_board, char* small_board, int small_idx
   if (isWinner(0, 0, small_board, player)) {
 
     if (isMetaWinner(meta_board, player)) {
-      if (player == '0') { 
+      if (player == 'O') { 
         res[0] = INT_MAX;
         res[1] = hisScore; 
       } else {
@@ -686,6 +690,7 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
   node_t res =  node_t(); 
   res.value = botMaximizing ? INT_MIN : INT_MAX; 
   res.row = -1; res.col = -1;
+  res.metaIdx = -1;
 
   int* init = (int*) calloc(2, sizeof(int));
   init[0] = 0;
@@ -703,10 +708,9 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
           if((int) meta_board[metaIdx].board[i*N+j] == 0 ) {
             root.row = i;
             root.col = j;
-            root.value = 0;
             int* scoreArr = (int *) calloc(2, sizeof(int));
             int* val = calculateSmallBoardScore(meta_board[0].board, i, j, 
-              botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+              player, opp, scoreArr);
             root.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
             root.metaIdx = metaIdx;
             free(val);
@@ -715,7 +719,8 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
           }
         }
       }
-      meta_board[metaIdx].board[root.row*N+root.col] = botMaximizing ? 'O' : 'X';
+      // printf("MI: %d, row: %d, col: %d\n", metaIdx, root.row, root.col);
+      meta_board[metaIdx].board[root.row*N+root.col] = player;
       node_t temp = alphabeta(root, 2, INT_MIN, INT_MAX, botMaximizing, 
         num_of_threads, meta_board, metaIdx);  
       meta_board[metaIdx].board[root.row*N+root.col] = 0;
@@ -741,7 +746,7 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
         }
       }
       else {
-        int resScore = temp.value - curScore; 
+        int resScore = temp.value + curScore; 
         curScore = curVal[1] - curVal[0];  
         if (resScore < res.value) { 
           res.value = resScore; 
@@ -823,12 +828,20 @@ int main(int argc, const char *argv[]) {
       if(!firstMove) {
         int nextIndex0;
         if(nextIsTBD) {
+          bool isFull = true;
           //TODO meta_board -> char* board
           char *tempBoard = (char *) calloc(N*N, sizeof(char));
           for(int i = 0; i < N; i++) {
             for(int j = 0; j < N; j++) {
-              tempBoard[i*N+j] = meta_board[i*N+j].status;
+              char status = meta_board[i*N+j].status;
+              tempBoard[i*N+j] = status;
+              if((int) status == 0) isFull = false;
             }
+          }
+          if(isFull) {
+            printf("Tie! %d\n", numTurns);
+            updateMetaCLI(meta_board, false, NULL);
+            break;
           }
           nextIndex0 = metaMove(meta_board, true, num_of_threads); 
           // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
@@ -868,13 +881,21 @@ int main(int argc, const char *argv[]) {
       int nextIndex;
 
       if(nextIsTBD) {
+        bool isFull = true;
         char *tempBoard = (char *) calloc(N*N, sizeof(char));
         for(int i = 0; i < N; i++) {
           for(int j = 0; j < N; j++) {
-            tempBoard[i*N+j] = meta_board[i*N+j].status;
+            char status = meta_board[i*N+j].status;
+            tempBoard[i*N+j] = status;
+            if((int) status == 0) isFull = false;
           }
         }
 
+        if(isFull) {
+          printf("Tie! %d\n", numTurns);
+          updateMetaCLI(meta_board, false, NULL);
+          break;
+        }
         nextIndex = metaMove(meta_board, false, num_of_threads); 
         // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
         free(tempBoard);
