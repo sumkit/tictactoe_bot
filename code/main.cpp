@@ -383,6 +383,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   return result;
 }
 
+
+
 node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximizing, 
   char *abBoard, int num_of_threads) {
   char* board = (char *) malloc(N*N*sizeof(char));
@@ -553,7 +555,7 @@ bool isMetaWinner(board_t* meta, char player) {
   return false;
 }
 
-int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col, char player, char opp, int* oldScore) {
+int* updatePlayerHeuristic(board_t* meta_board, char* small_board, int small_idx, char player, char opp, int* oldScore) {
   int center = N/2 * N + N/2; 
   int* res = (int *) calloc(2, sizeof(int)); 
   
@@ -583,11 +585,16 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
   int iWon = 1; 
   int fail = 0;
 
-  if (isWinner(row, col, meta_board[small_idx].board, player)) {
+  if (isWinner(0, 0, small_board, player)) {
 
     if (isMetaWinner(meta_board, player)) {
-      res[0] = INT_MAX;
-      res[1] = hisScore; 
+      if (player == '0') { 
+        res[0] = INT_MAX;
+        res[1] = hisScore; 
+      } else {
+        res[0] = hisScore;
+        res[1] = INT_MAX; 
+      }
       return res; 
     }
 
@@ -680,6 +687,52 @@ int* updatePlayerHeuristic(board_t* meta_board, int small_idx, int row, int col,
   }
 
   return res;
+}
+
+node_t metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) { 
+  node_t res =  node_t(); 
+  int maxScore = 0; 
+  char* board; 
+  int* init = (int*) calloc(2, sizeof(int));
+  init[0] = 0;
+  init[1] = 0;
+  char player = botMaximizing ? 'O' : 'X'; 
+  char opp = botMaximizing ? 'X' : 'O'; 
+  for (int metaIdx = 0; metaIdx < N*N; metaIdx++) { 
+    board = meta_board[metaIdx].board; 
+    char status = meta_board[metaIdx].status;
+    if ((int) status == 0) { 
+      node_t temp = node_t(); 
+      temp = alphabeta(temp, 2, INT_MAX, INT_MIN, botMaximizing, 
+        num_of_threads, meta_board, metaIdx);  
+
+      char* boardcpy = (char *) calloc(N*N, sizeof(char)); 
+      memcpy(board, boardcpy, N*N); 
+      boardcpy[temp.row*N + temp.col] = player; 
+
+      int* curVal = updatePlayerHeuristic(meta_board, boardcpy, metaIdx, player, opp, init);
+      int curScore;
+      int updatedScore; 
+
+      if (botMaximizing)
+        curScore = curVal[0] - curVal[1];
+      else
+        curScore = curVal[1] - curVal[0];  
+      
+      int resScore = temp.value + curScore; 
+      if (resScore > maxScore) { 
+        maxScore = resScore; 
+        res.value = resScore; 
+        res.row = temp.row; 
+        res.col = temp.col; 
+        res.metaIdx = metaIdx; 
+      }
+    free(curVal); 
+    free(boardcpy); 
+    }
+  }
+  return res; 
+
 }
 
 int main(int argc, const char *argv[]) {
