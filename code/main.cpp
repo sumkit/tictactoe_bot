@@ -12,7 +12,7 @@
 static int _argc;
 static const char **_argv;
 
-const int N = 3; //dimensions of board
+const int N = 5; //dimensions of board
 
 int min(int a, int b) {
   return (a < b) ? a : b;
@@ -43,6 +43,7 @@ void updateCLI(char *board) {
   }
 }
 void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
+  int nonblank = 0;
   if(file) fprintf(output_file, "META: \n");
   else printf("META: \n");
   for(int i = 0; i < N; i++) {
@@ -78,6 +79,7 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
           } else {
             if(file) fprintf(output_file, "%c|", temp);
             else printf("%c|", temp);
+            nonblank++;
           }
         }
       }
@@ -93,6 +95,9 @@ void updateMetaCLI(board_t *meta_board, bool file, FILE *output_file) {
   }
   if(file) fprintf(output_file, "\n");
   else printf("\n");
+
+  if(file) fprintf(output_file, "Spots on board taken up: %d\n", nonblank);
+  else printf("Spots on board taken up: %d\n", nonblank);
 }
 
 //for mini board
@@ -372,8 +377,6 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
 
   return result;
 }
-
-
 
 node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximizing, 
   char *abBoard, int num_of_threads) {
@@ -682,6 +685,7 @@ int* updatePlayerHeuristic(board_t* meta_board, char* small_board, int small_idx
 int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) { 
   node_t res =  node_t(); 
   res.value = botMaximizing ? INT_MIN : INT_MAX; 
+  res.row = -1; res.col = -1;
 
   int* init = (int*) calloc(2, sizeof(int));
   init[0] = 0;
@@ -693,8 +697,28 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
   for (int metaIdx = 0; metaIdx < N*N; metaIdx++) { 
     char status = meta_board[metaIdx].status;
     if ((int) status == 0) { 
-      node_t temp = alphabeta(temp, 2, INT_MAX, INT_MIN, botMaximizing, 
+      node_t root = node_t();
+      for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+          if((int) meta_board[metaIdx].board[i*N+j] == 0 ) {
+            root.row = i;
+            root.col = j;
+            root.value = 0;
+            int* scoreArr = (int *) calloc(2, sizeof(int));
+            int* val = calculateSmallBoardScore(meta_board[0].board, i, j, 
+              botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+            root.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
+            root.metaIdx = metaIdx;
+            free(val);
+            free(scoreArr);
+            break;
+          }
+        }
+      }
+      meta_board[metaIdx].board[root.row*N+root.col] = botMaximizing ? 'O' : 'X';
+      node_t temp = alphabeta(root, 2, INT_MIN, INT_MAX, botMaximizing, 
         num_of_threads, meta_board, metaIdx);  
+      meta_board[metaIdx].board[root.row*N+root.col] = 0;
       meta_board[metaIdx].board[temp.row*N + temp.col] = player; 
       int* curVal = updatePlayerHeuristic(meta_board, meta_board[metaIdx].board, metaIdx, player, opp, init);
       meta_board[metaIdx].board[temp.row*N + temp.col] = 0; 
@@ -709,6 +733,11 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
           res.row = temp.row; 
           res.col = temp.col; 
           res.metaIdx = metaIdx; 
+        } else if(res.row == -1) {
+          res.row = temp.row;
+          res.col = temp.col;
+          res.value = resScore;
+          res.metaIdx = metaIdx; 
         }
       }
       else {
@@ -718,6 +747,11 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
           res.value = resScore; 
           res.row = temp.row; 
           res.col = temp.col; 
+          res.metaIdx = metaIdx; 
+        } else if(res.row == -1) {
+          res.row = temp.row;
+          res.col = temp.col;
+          res.value = resScore;
           res.metaIdx = metaIdx; 
         }
       }
