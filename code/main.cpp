@@ -12,7 +12,7 @@
 static int _argc;
 static const char **_argv;
 
-const int N = 5; //dimensions of board
+const int N = 3; //dimensions of board
 
 int min(int a, int b) {
   return (a < b) ? a : b;
@@ -804,9 +804,11 @@ int main(int argc, const char *argv[]) {
               tempBoard[i*N+j] = meta_board[i*N+j].status;
             }
           }
-          node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
+          node_t meta = metaMove(meta_board, true, num_of_threads); 
+          nextIndex0 = makeMove(meta_board, meta.metaIdx, meta.row, meta.col, 'O'); 
+          //node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
           free(tempBoard);
-          nextIndex0 = metaRes.row*N+metaRes.col;
+          //nextIndex0 = metaRes.row*N+metaRes.col;
         } else {
           nextIndex0 = root.row*N+root.col;
         }
@@ -847,9 +849,12 @@ int main(int argc, const char *argv[]) {
             tempBoard[i*N+j] = meta_board[i*N+j].status;
           }
         }
-        node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
+
+        node_t meta = metaMove(meta_board, false, num_of_threads); 
+        nextIndex = makeMove(meta_board, meta.metaIdx, meta.row, meta.col, 'X'); 
+        //node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
         free(tempBoard);
-        nextIndex = metaRes.row * N + metaRes.col;
+        //nextIndex = metaRes.row * N + metaRes.col;
       }
       else {
         nextIndex = root.row*N+root.col;
