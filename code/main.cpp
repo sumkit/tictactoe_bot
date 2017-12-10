@@ -265,8 +265,8 @@ bool boardComplete(char* local_board) {
 int makeMove(board_t* meta_board, int local_board_idx, int row, int col, char player) { 
   int next_board_idx = row*N+col; 
   if((int) (meta_board[local_board_idx].board[next_board_idx]) != 0) {
-    // printf("dumb nuts local = %d r = %d, c = %d, before = %d, new = %d\n", local_board_idx, row, col, 
-    //   (int) (meta_board[local_board_idx].board[next_board_idx]), (int) player);
+    printf("dumb nuts local = %d r = %d, c = %d, before = %d, new = %d\n", local_board_idx, row, col, 
+      (int) (meta_board[local_board_idx].board[next_board_idx]), (int) player);
   } 
   meta_board[local_board_idx].board[next_board_idx] = player; 
   meta_board[local_board_idx].numFilled++;
@@ -379,104 +379,6 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
     }
   }
 
-  return result;
-}
-
-node_t metaAlphabeta(node_t *nodePtr, int depth, int alpha, int beta, bool botMaximizing, 
-  char *abBoard, int num_of_threads) {
-  char* board = (char *) malloc(N*N*sizeof(char));
-  memcpy(board, abBoard, N*N);
-
-  if(nodePtr != NULL) {
-    node_t node = *nodePtr;
-    if(botMaximizing) {
-      board[node.row*N+node.col] = 'O';
-      if(isWinner(node.row, node.col, board, 'O')) {
-        node_t res = node_t();
-        res.value = INT_MAX;
-        res.row = node.row;
-        res.col = node.col;
-        return res;
-      } 
-
-    }
-    else {
-      board[node.row*N+node.col] = 'X';
-      if(isWinner(node.row, node.col, board, 'X')) {
-        node_t res = node_t();
-        res.value = INT_MIN;
-        res.row = node.row;
-        res.col = node.col;
-        return res;
-      } 
-    }
-  } 
-  
-  int numChildren = 0;
-  int firstChildRow, firstChildCol;
-  for(int r = 0; r < N; r++) {
-    for(int c = 0; c < N; c++) {
-      if((int)board[r*N+c] == 0) {
-        if(numChildren == 0) {
-          firstChildRow = r;
-          firstChildCol = c;
-        }
-        numChildren++;
-      } 
-    }
-  } 
-  if(depth == 0 || numChildren == 0) {
-    return *nodePtr;
-  }
-
-  //generate tree
-  node_t result = node_t();
-  result.row = firstChildRow;
-  result.col = firstChildCol;
-  int i;
-  #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
-  for(i = 0; i < N; i++) {
-    int j;
-    #pragma omp parallel for default(shared) private(j) num_threads(num_of_threads)
-    for(j = 0; j < N; j++) {
-      int index = i*N + j;
-      if((int)board[index] == 0) {
-        int* scoreArr = (int *) malloc(2*sizeof(int));
-        scoreArr[0] = alpha;
-        scoreArr[1] = beta; 
-        int* val = calculateSmallBoardScore(board, i, j, 
-          botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
-        free(scoreArr);
-        node_t temp = node_t();
-        temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
-        temp.row = i;
-        temp.col = j;
-        free(val);
-
-        if(botMaximizing) {
-          result.value = INT_MIN;
-          node_t ab = metaAlphabeta(&temp, depth-1, alpha, beta, false, board, num_of_threads);
-          if(ab.value > result.value) {
-            result.value = ab.value;
-            result.row = i;
-            result.col = j;
-          }
-          alpha = max(alpha, result.value);
-        }
-        else {
-          result.value = INT_MAX;
-          node_t ab = metaAlphabeta(&temp, depth-1, alpha, beta, true, board, num_of_threads);
-          if(ab.value < result.value) {
-            result.value = ab.value;
-            result.row = i;
-            result.col = j;
-          }
-          beta = min(beta, result.value);
-        }
-      }
-    }
-  }
-  
   return result;
 }
 
@@ -686,7 +588,7 @@ int* updatePlayerHeuristic(board_t* meta_board, char* small_board, int small_idx
   return res;
 }
 
-int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) { 
+node_t metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads, int depth) { 
   node_t res =  node_t(); 
   res.value = botMaximizing ? INT_MIN : INT_MAX; 
   res.row = -1; res.col = -1;
@@ -699,7 +601,9 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
   char player = botMaximizing ? 'O' : 'X'; 
   char opp = botMaximizing ? 'X' : 'O'; 
 
-  for (int metaIdx = 0; metaIdx < N*N; metaIdx++) { 
+  int metaIdx;
+  #pragma omp parallel for default(shared) private(metaIdx) num_threads(num_of_threads)
+  for (metaIdx = 0; metaIdx < N*N; metaIdx++) { 
     char status = meta_board[metaIdx].status;
     if ((int) status == 0) { 
       node_t root = node_t();
@@ -715,13 +619,13 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
             root.metaIdx = metaIdx;
             free(val);
             free(scoreArr);
-            break;
+            i = N; j=N; //break from loop
           }
         }
       }
       // printf("MI: %d, row: %d, col: %d\n", metaIdx, root.row, root.col);
       meta_board[metaIdx].board[root.row*N+root.col] = player;
-      node_t temp = alphabeta(root, 2, INT_MIN, INT_MAX, botMaximizing, 
+      node_t temp = alphabeta(root, depth, INT_MIN, INT_MAX, botMaximizing, 
         num_of_threads, meta_board, metaIdx);  
       meta_board[metaIdx].board[root.row*N+root.col] = 0;
       meta_board[metaIdx].board[temp.row*N + temp.col] = player; 
@@ -746,8 +650,8 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
         }
       }
       else {
-        int resScore = temp.value + curScore; 
         curScore = curVal[1] - curVal[0];  
+        int resScore = temp.value + curScore; 
         if (resScore < res.value) { 
           res.value = resScore; 
           res.row = temp.row; 
@@ -763,7 +667,7 @@ int metaMove(board_t* meta_board, bool botMaximizing, int num_of_threads) {
       free(curVal); 
     }
   }
-  return res.metaIdx; 
+  return res; 
 }
 
 int main(int argc, const char *argv[]) {
@@ -825,6 +729,7 @@ int main(int argc, const char *argv[]) {
 
     while(1) {
       //TODO change this to check if it is the first turn or not instead of hardcoded coordinates
+      node_t res0 = node_t();
       if(!firstMove) {
         int nextIndex0;
         if(nextIsTBD) {
@@ -843,15 +748,14 @@ int main(int argc, const char *argv[]) {
             updateMetaCLI(meta_board, false, NULL);
             break;
           }
-          nextIndex0 = metaMove(meta_board, true, num_of_threads); 
-          // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, true, tempBoard, num_of_threads);
+          res0 = metaMove(meta_board, true, num_of_threads, depth); 
           free(tempBoard);
-          // nextIndex0 = metaRes.row*N+metaRes.col;
+          nextIndex0 = res0.metaIdx;
         } else {
           nextIndex0 = root.row*N+root.col;
+          res0 = alphabeta(root, depth, INT_MIN, INT_MAX, true, num_of_threads, meta_board, nextIndex0);
         }
         
-        node_t res0 = alphabeta(root, depth, INT_MIN, INT_MAX, true, num_of_threads, meta_board, nextIndex0);
         int mm0 = makeMove(meta_board, nextIndex0, res0.row, res0.col, 'O');
 
         if(mm0 != res0.row*N+res0.col ) {
@@ -879,7 +783,7 @@ int main(int argc, const char *argv[]) {
       }
       
       int nextIndex;
-
+      node_t res = node_t();
       if(nextIsTBD) {
         bool isFull = true;
         char *tempBoard = (char *) calloc(N*N, sizeof(char));
@@ -896,15 +800,15 @@ int main(int argc, const char *argv[]) {
           updateMetaCLI(meta_board, false, NULL);
           break;
         }
-        nextIndex = metaMove(meta_board, false, num_of_threads); 
-        // node_t metaRes = metaAlphabeta(NULL, 1, INT_MIN, INT_MAX, false, tempBoard, num_of_threads);
+        res = metaMove(meta_board, false, num_of_threads, depth); 
         free(tempBoard);
-        // nextIndex = metaRes.row * N + metaRes.col;
+        nextIndex = res.metaIdx;
       }
       else {
         nextIndex = root.row*N+root.col;
+        res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
       }
-      node_t res = alphabeta(root, depth, INT_MIN, INT_MAX, false, num_of_threads, meta_board, nextIndex);
+      
       int mm = makeMove(meta_board, nextIndex, res.row, res.col, 'X');
 
       if(mm != res.row*N+res.col) {
