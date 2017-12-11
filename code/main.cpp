@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <omp.h>
 #include <string.h>
+#include <chrono>
 
 #include "main.h"
 
@@ -310,70 +311,140 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   node_t result = node_t();
   result.row = firstChildRow;
   result.col = firstChildCol;
-  int i;
-  #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
-  for(i = 0; i < N; i++) {
-    int j;
-    #pragma omp parallel for default(shared) private(j) num_threads(num_of_threads)
-    for(j = 0; j < N; j++) {
-      int index = i*N + j;
-      if((int)meta_board[metaIndex].board[index] == 0) {
-        int* scoreArr = (int *) malloc(2*sizeof(int));
-        scoreArr[0] = alpha;
-        scoreArr[1] = beta; 
-        int* val = calculateSmallBoardScore(meta_board[metaIndex].board, i, j, 
-          botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
-        free(scoreArr);
-        node_t temp = node_t();
-        temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
-        temp.row = i;
-        temp.col = j;
-        temp.metaIdx = metaIndex; 
-        free(val);
 
-        if(botMaximizing) {
-          result.value = INT_MIN;
-          meta_board[metaIndex].board[index] = 'O';
-          node_t ab = node_t();
-          if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
-            ab.value = INT_MAX;
-            ab.row = i;
-            ab.col = j;
-            ab.metaIdx = metaIndex; 
+  if (depth < 2) { 
+    int i;
+    for(i = 0; i < N; i++) {
+      int j;
+      for(j = 0; j < N; j++) {
+        int index = i*N + j;
+        if((int)meta_board[metaIndex].board[index] == 0) {
+          int* scoreArr = (int *) malloc(2*sizeof(int));
+          scoreArr[0] = alpha;
+          scoreArr[1] = beta; 
+          int* val = calculateSmallBoardScore(meta_board[metaIndex].board, i, j, 
+            botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+          free(scoreArr);
+          node_t temp = node_t();
+          temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
+          temp.row = i;
+          temp.col = j;
+          temp.metaIdx = metaIndex; 
+          free(val);
+
+          if(botMaximizing) {
+            result.value = INT_MIN;
+            meta_board[metaIndex].board[index] = 'O';
+            node_t ab = node_t();
+            if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
+              ab.value = INT_MAX;
+              ab.row = i;
+              ab.col = j;
+              ab.metaIdx = metaIndex; 
+            } else {
+              ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+                meta_board, index);
+            }
+            meta_board[metaIndex].board[index] = 0; 
+            if(ab.value > result.value) {
+              result.value = ab.value;
+              result.row = i;
+              result.col = j;
+              result.metaIdx = ab.metaIdx;  
+            }
+            alpha = max(alpha, result.value);
           } else {
-            ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
-              meta_board, index);
+            result.value = INT_MAX;
+            meta_board[metaIndex].board[index] = 'X';
+            node_t ab = node_t();
+            if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
+              ab.value = INT_MIN;
+              ab.row = i;
+              ab.col = j;
+              ab.metaIdx = metaIndex;
+            } 
+            else {
+              ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+                meta_board, index);
+            }
+            meta_board[metaIndex].board[index] = 0;
+            if(ab.value < result.value) {
+              result.value = ab.value;
+              result.row = i;
+              result.col = j;
+              result.metaIdx = ab.metaIdx;
+            }
+            beta = min(beta, result.value);
           }
-          meta_board[metaIndex].board[index] = 0; 
-          if(ab.value > result.value) {
-            result.value = ab.value;
-            result.row = i;
-            result.col = j;
-            result.metaIdx = ab.metaIdx;  
+        }
+      }
+    }
+  } else {
+    int i;
+    #pragma omp parallel for default(shared) private(i) num_threads(num_of_threads)
+    for(i = 0; i < N; i++) {
+      int j;
+      #pragma omp parallel for default(shared) private(j) num_threads(num_of_threads)
+      for(j = 0; j < N; j++) {
+        int index = i*N + j;
+        if((int)meta_board[metaIndex].board[index] == 0) {
+          int* scoreArr = (int *) malloc(2*sizeof(int));
+          scoreArr[0] = alpha;
+          scoreArr[1] = beta; 
+          int* val = calculateSmallBoardScore(meta_board[metaIndex].board, i, j, 
+            botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+          free(scoreArr);
+          node_t temp = node_t();
+          temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
+          temp.row = i;
+          temp.col = j;
+          temp.metaIdx = metaIndex; 
+          free(val);
+
+          if(botMaximizing) {
+            result.value = INT_MIN;
+            meta_board[metaIndex].board[index] = 'O';
+            node_t ab = node_t();
+            if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
+              ab.value = INT_MAX;
+              ab.row = i;
+              ab.col = j;
+              ab.metaIdx = metaIndex; 
+            } else {
+              ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+                meta_board, index);
+            }
+            meta_board[metaIndex].board[index] = 0; 
+            if(ab.value > result.value) {
+              result.value = ab.value;
+              result.row = i;
+              result.col = j;
+              result.metaIdx = ab.metaIdx;  
+            }
+            alpha = max(alpha, result.value);
+          } else {
+            result.value = INT_MAX;
+            meta_board[metaIndex].board[index] = 'X';
+            node_t ab = node_t();
+            if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
+              ab.value = INT_MIN;
+              ab.row = i;
+              ab.col = j;
+              ab.metaIdx = metaIndex;
+            } 
+            else {
+              ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+                meta_board, index);
+            }
+            meta_board[metaIndex].board[index] = 0;
+            if(ab.value < result.value) {
+              result.value = ab.value;
+              result.row = i;
+              result.col = j;
+              result.metaIdx = ab.metaIdx;
+            }
+            beta = min(beta, result.value);
           }
-          alpha = max(alpha, result.value);
-        } else {
-          result.value = INT_MAX;
-          meta_board[metaIndex].board[index] = 'X';
-          node_t ab = node_t();
-          if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
-            ab.value = INT_MIN;
-            ab.row = i;
-            ab.col = j;
-            ab.metaIdx = metaIndex;
-          } 
-          else {
-            ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
-              meta_board, index);
-          }
-          meta_board[metaIndex].board[index] = 0;
-          if(ab.value < result.value) {
-            result.value = ab.value;
-            result.row = i;
-            result.col = j;
-            result.metaIdx = ab.metaIdx;
-          }
-          beta = min(beta, result.value);
         }
       }
     }
@@ -674,6 +745,16 @@ int main(int argc, const char *argv[]) {
   _argc = argc - 1;
   _argv = argv + 1;
 
+  using namespace std::chrono;
+  typedef std::chrono::high_resolution_clock Clock;
+  typedef std::chrono::duration<double> dsec;
+
+  auto init_start = Clock::now();
+  double init_time = 0;
+
+  /* initialize random seed: */
+  srand (time(NULL));
+
   // 3x3 meta board with pointers to 9 constituent local boards 
   // meta board holds a status for each board: "O" if O won, X if X won, 0 if in progress, 1 if tied. 
   board_t* meta_board = (board_t*) calloc(N*N, sizeof(board_t)); 
@@ -688,6 +769,12 @@ int main(int argc, const char *argv[]) {
   // char* board = meta_board[0].board; 
 
   int num_of_threads = get_option_int("-n", 1);
+
+  init_time += duration_cast<dsec>(Clock::now() - init_start).count();
+  printf("Initialization Time: %lf.\n", init_time);
+
+  auto compute_start = Clock::now();
+  double compute_time = 0;
 
 #ifdef RUN_MIC /* Use RUN_MIC to distinguish between the target of compilation */
   {
@@ -713,8 +800,8 @@ int main(int argc, const char *argv[]) {
 
     //TODO start with random row and column 
     node_t root = node_t();
-    root.row = 1;
-    root.col = 1;
+    root.row = rand() % N;
+    root.col = rand() % N;
     root.metaIdx = 0;
     // root.value = calculateValue(board, 1,1, false);
     int* scoreArr = (int *) malloc(2*sizeof(int));
@@ -837,6 +924,9 @@ int main(int argc, const char *argv[]) {
       if(firstMove) firstMove = false;
     }
   }
+
+  compute_time += duration_cast<dsec>(Clock::now() - compute_start).count();
+  printf("Computation Time: %lf.\n", compute_time);
 
   char output_filename[BUFSIZE];
   sprintf(output_filename, "file_outputs/output_%d.txt", num_of_threads);
