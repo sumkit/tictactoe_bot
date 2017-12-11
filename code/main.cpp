@@ -312,8 +312,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   result.row = firstChildRow;
   result.col = firstChildCol;
 
-  if (depth < 2) {
-      int i;
+  if (depth < 2) { 
+    int i;
   for(i = 0; i < N; i++) {
     int j;
     for(j = 0; j < N; j++) {
@@ -378,10 +378,9 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
           beta = min(beta, result.value);
           }
       }
-    }
-    }
-
-  } else {
+}
+  }
+  }else { 
   #pragma omp parallel num_threads(num_of_threads)
   #pragma omp single
   {
@@ -453,13 +452,13 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
           }
         }
       }
-    }
 }
 
-  #pragma omp taskwait
 }
   
+  #pragma omp taskwait
   }
+}
   
 
   return result;
