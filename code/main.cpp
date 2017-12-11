@@ -312,6 +312,76 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
   result.row = firstChildRow;
   result.col = firstChildCol;
 
+  if (depth < 2) {
+      int i;
+  for(i = 0; i < N; i++) {
+    int j;
+    for(j = 0; j < N; j++) {
+      int index = i*N + j;
+      if((int)meta_board[metaIndex].board[index] == 0) {
+
+        int* scoreArr = (int *) malloc(2*sizeof(int));
+        scoreArr[0] = alpha;
+        scoreArr[1] = beta; 
+        int* val = calculateSmallBoardScore(meta_board[metaIndex].board, i, j, 
+          botMaximizing ? 'O' : 'X', botMaximizing ? 'X' : 'O', scoreArr);
+        free(scoreArr);
+        node_t temp = node_t();
+        temp.value = botMaximizing ? val[0] - val[1] : val[1] - val[0]; 
+        temp.row = i;
+        temp.col = j;
+        temp.metaIdx = metaIndex; 
+        free(val);
+
+        if(botMaximizing) {
+            result.value = INT_MIN;
+            meta_board[metaIndex].board[index] = 'O';
+            node_t ab = node_t();
+            if(isWinner(i, j, meta_board[metaIndex].board, 'O')) {
+              ab.value = INT_MAX;
+              ab.row = i;
+              ab.col = j;
+              ab.metaIdx = metaIndex; 
+            } else {
+              ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+                meta_board, index);
+            }
+            meta_board[metaIndex].board[index] = 0; 
+            if(ab.value > result.value) {
+              result.value = ab.value;
+              result.row = i;
+              result.col = j;
+              result.metaIdx = ab.metaIdx;  
+            } 
+            alpha = max(alpha, result.value);
+        } else {
+          result.value = INT_MAX;
+          meta_board[metaIndex].board[index] = 'X';
+          node_t ab = node_t();
+          if(isWinner(i, j, meta_board[metaIndex].board, 'X')) {
+            ab.value = INT_MIN;
+            ab.row = i;
+            ab.col = j;
+            ab.metaIdx = metaIndex;
+          } 
+          else {
+            ab = alphabeta(temp, depth-1, alpha, beta, !botMaximizing, num_of_threads, 
+              meta_board, index);
+          }
+          meta_board[metaIndex].board[index] = 0;
+          if(ab.value < result.value) {
+            result.value = ab.value;
+            result.row = i;
+            result.col = j;
+            result.metaIdx = ab.metaIdx;
+          }
+          beta = min(beta, result.value);
+          }
+      }
+    }
+    }
+
+  } else {
   #pragma omp parallel num_threads(num_of_threads)
   #pragma omp single
   {
@@ -388,6 +458,8 @@ node_t alphabeta(node_t node, int depth, int alpha, int beta, bool botMaximizing
 
   #pragma omp taskwait
 }
+  
+  }
   
 
   return result;
