@@ -1,0 +1,48 @@
+in pragma
+Initialization Time: 0.000013.
+in ifdef
+Tie! 462
+META: 
+X|X|O|1 |X|
+X|1 |X|X|X|
+O|X|O|O|O|
+X|O|O|1 |X|
+X|O|O|1 |O|
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+ | | | | | | | | | | | |X|O|O|X|X|O|O|O| | |O|O| |
+ | | | |O| | | | | |O| |O|O| |O|X|X|X|O| | | | |X|
+ |X| |X| | | | | | | |O|O|O|O|O|O|X|X|O|X|X|X|X|X|
+X|X|X|X|X| |X| |X|X|X|O|X|O|X|O|X|X|O|X|X|O|X|X|X|
+O|X|X|X|X|X|X|X|X|X|X|X|X|O|X|O|X|X|X|X|X|X|O|X|X|
+ | | | | |X|X|X|O|X|O| |X|X| | | | |X| |O| |X| | |
+ | |O| | |O|O|O|X|X| |X|O| |X| | | |X| | | |O| | |
+ | |X|O| |X|O|X|O|O|X|X| |X| |X| | |X|X| | | |O| |
+ | | |X|O|X|O|O|X|X|X| | |X|X|O|O|X|X|O| | |O|X| |
+X|X|X|X|X|O|X|X|O|X|X|X|X|X|X|O|X|X|X|X|X|X|X|X|X|
+ | | |O| | | |X|O| | | | |O| |X|X|O|O|O| | |X|O|X|
+ | | | | | | | | | | | | |O| | |O|O|O|X|X|O|O|O|X|
+X|O|X|X|O|X|X|X|X|X|O|X|X|O|O| |O|O|X|X|O|O|O|O|X|
+O|O|O|O|O| | |O|O|O| |O|O|O| |O|O|O|X|O|X|X|X|O|X|
+O|X|O|O|X|O|O|O|O|X|O|X|O|O|O|X|O|O|O|X|O|X|X|O|O|
+O|O| | | | | |O|O| |O|O|O|X|O|O|O|X|X|O|O| |O|O|X|
+ | | | | | |X| | | | |O|O|O|X|O|X|O|O|O|O|O|O|O| |
+ | | | | | | | | | |X|O|X|X|O|O|X|X|O|O|X|X|X|X|X|
+O| | |O|X| |X| |O|O|X|O|X|X|O|X|X|O|X|O|X| |O|X|O|
+X|X|X|X|X|O|O|O|O|O|X|O|O|O|X|O|X|O|O|X|O|X|X|X|O|
+X|O|O|O| |O|O|O|O|O|O|O|X| |X|O|X|X|O|O|O|O| |X|O|
+X|O|O| | |O| |O|X|O| |O|X|O|X|X|O|O|O|O|O|O|O|O|O|
+X|X|X|X|O|X|O|O|O|O| |X|O|X| |O|X|X|X|X|O|O|O|X|X|
+X|X|X|X|X|O|X|X|O|X|O|O|X|O|X|O|O|X|X|O|O|X|O|X|O|
+O|X|O|O|X|X|O|X|O|O|O|O|X|O|O|X|O|X|X|X|O|X|O|X|O|
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+Spots on board taken up: 462
+Computation Time: 5.448756.
+Error: couldn't output costs file
+ Performance counter stats for './main -n 16':
+
+         286184563      cache-misses                                                
+
+       6.677617081 seconds time elapsed
+
+mv: cannot stat `/home/srishtis/costs_*': No such file or directory
+mv: cannot stat `/home/srishtis/output_*': No such file or directory
