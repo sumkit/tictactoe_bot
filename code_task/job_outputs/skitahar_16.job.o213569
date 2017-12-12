@@ -1,0 +1,46 @@
+in pragma
+in ifdef
+X Won! numturns = 150
+META: 
+ |X| | | |
+O|X| | | |
+O|X| | | |
+O|X| | | |
+O|X| | | |
+
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+O|X|X|X| | |X| | | |O| | | | | | | | | | | | | | |
+O|O| |X| |O|X| | | |O| | | | | | | | | | | | | | |
+X|O|O| | |O|X| | | | | | | | |O| | | | | | | | | |
+O|X|X|X|X| |X| | | | | | | | | | | | | |O| | | | |
+O|X| |O| |O|X| | | |O| | | | | |X| | | |O| | | | |
+ |O| | | |X| | | | | | | | | | | | | | | | | | | |
+ |O| | | |X|O|X| | |X| |O| | | | | | | |X| | | | |
+ |O| | | |X|X|O| | |X|O| | | |O| | | | | | | | | |
+X|O| | | |X| | | | |X|X| | | | | | | | | | | | | |
+X|O| | | |X| | | | |X| | | | |X| | | | | | | | | |
+X|O|X|O|X|O|X|X| |X| |X| | | |X| | | | | | | | | |
+O|O|O|O|O|O| |X| | |O| |O| | | | | | | | | | | | |
+O| |X|O| |O|X|X| | | |X| | | | | | | | | | | | | |
+X|X|O| | |X|O|X| | |X| | | | | | | | | | | | | | |
+O| |O|O| |X| |X| | |X| | | | | | | | | | | | | | |
+O| | | | |X|O| | | |O| | | | | | | | | | | | | | |
+O|X| | | |X| |O| | | | | | | | | | | | | | | | | |
+O| | | | |X|O| | | | | | | | | | | | | | | | | | |
+O| | | | |X|O| | | | | | |X| |O| | | | | | | | | |
+O| | | | |X|O|O| | |X|O| |X| |O| | | | |O| | | | |
+ |O| | | |X|O| | | | | | | | | | | | | | | | | | |
+X|O| | | |X|O| | | |X| |O| | | | | | | | | | | | |
+ |O| | | |X| |O| | | | | | | |X| | | | | | | | | |
+X|O| | | |X|O| | | |X| | | | |O| | | | | | | | | |
+X|O| | | |X|O|O| | |X| | | | |X| | | | | | | | | |
+ - - - - - - - - - - - - - - - - - - - - - - - - -
+Error: couldn't output costs file
+ Performance counter stats for './main -n 16':
+
+          77890031      cache-misses                                                
+
+       7.109039360 seconds time elapsed
+
+mv: cannot stat `/home/skitahar/costs_*': No such file or directory
+mv: cannot stat `/home/skitahar/output_*': No such file or directory

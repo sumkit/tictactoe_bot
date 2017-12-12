@@ -1,0 +1,12 @@
+offload error: cannot offload to MIC - device is not available
+Initialization Time: 0.000010.
+in ifdef
+
+ Performance counter stats for './main -n 8':
+
+             22821      cache-misses                                                
+
+       0.003582357 seconds time elapsed
+
+mv: cannot stat `/home/srishtis/costs_*': No such file or directory
+mv: cannot stat `/home/srishtis/output_*': No such file or directory
